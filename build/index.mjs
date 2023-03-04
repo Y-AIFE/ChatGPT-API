@@ -24,16 +24,27 @@ var __privateMethod = (obj, member, method) => {
 // src/ConversationStore.ts
 import Keyv from "keyv";
 import LRUCache from "lru-cache";
-var _store;
+var _store, _lru, _maxFindDepth, _debug;
 var ConversationStore = class {
-  constructor() {
+  constructor(params) {
     __privateAdd(this, _store, void 0);
-    const lru = new LRUCache({
-      max: 1e4
-    });
-    __privateSet(this, _store, new Keyv({
-      store: lru
+    __privateAdd(this, _lru, void 0);
+    /**
+     * in case some bad things happen
+     */
+    __privateAdd(this, _maxFindDepth, void 0);
+    __privateAdd(this, _debug, void 0);
+    const { maxKeys = 1e4, maxFindDepth = 20, debug = false } = params;
+    __privateSet(this, _lru, new LRUCache({
+      max: maxKeys
     }));
+    __privateSet(this, _store, new Keyv({
+      store: __privateGet(this, _lru)
+    }));
+    __privateSet(this, _maxFindDepth, maxFindDepth);
+    __privateSet(this, _debug, debug);
+    if (__privateGet(this, _debug))
+      console.log("ConversationStore params", params);
   }
   /**
    * get message by id
@@ -48,8 +59,12 @@ var ConversationStore = class {
    * @param msg
    * @returns
    */
-  async set(msg) {
-    return await __privateGet(this, _store).set(msg.id, msg);
+  async set(msgs) {
+    for (const msg of msgs) {
+      await __privateGet(this, _store).set(msg.id, msg);
+    }
+    if (__privateGet(this, _debug))
+      console.log("lru size", __privateGet(this, _lru).size);
   }
   /**
    * check if the id exists in the store
@@ -73,14 +88,54 @@ var ConversationStore = class {
    */
   async clear1Conversation(id) {
     let parentMessageId = id;
-    while (parentMessageId && this.has(parentMessageId)) {
+    let cnt = 0;
+    while (parentMessageId && cnt < __privateGet(this, _maxFindDepth)) {
+      cnt++;
       const msg = await this.get(parentMessageId);
       if (msg) {
         await this.delete(msg.id);
       }
       parentMessageId = msg == null ? void 0 : msg.parentMessageId;
     }
-    console.log("conversation cleared");
+  }
+  /**
+   * find messages in a conversation by id
+   * @param id parentMessageId
+   */
+  async findMessages(opts) {
+    let {
+      id = void 0,
+      tokenizer,
+      limit,
+      availableTokens,
+      ignore = false
+    } = opts;
+    let parentMessageId = id;
+    let cnt = 0;
+    const messages = [];
+    while (parentMessageId && cnt < __privateGet(this, _maxFindDepth)) {
+      const msg = await __privateGet(this, _store).get(
+        parentMessageId
+      );
+      if (msg && !(ignore && msg.role === "assistant" /* assistant */)) {
+        let tokensCnt = msg.tokens || tokenizer.getTokenCnt(msg.text);
+        if (tokensCnt <= limit) {
+          if (availableTokens < tokensCnt)
+            break;
+          messages.unshift({
+            role: msg.role,
+            content: msg.text
+          });
+          cnt++;
+          availableTokens -= tokensCnt;
+        }
+      }
+      parentMessageId = msg == null ? void 0 : msg.parentMessageId;
+    }
+    if (__privateGet(this, _debug)) {
+      console.log("availableTokens", availableTokens);
+    }
+    return messages;
   }
   /**
    * clear the store
@@ -90,6 +145,48 @@ var ConversationStore = class {
   }
 };
 _store = new WeakMap();
+_lru = new WeakMap();
+_maxFindDepth = new WeakMap();
+_debug = new WeakMap();
+
+// src/Tokenizer.ts
+import { get_encoding } from "@dqbd/tiktoken";
+var _tokenizer, _replaceReg, _replaceCallback, _encode, encode_fn;
+var Tokenizer = class {
+  constructor(opts) {
+    __privateAdd(this, _encode);
+    __privateAdd(this, _tokenizer, void 0);
+    __privateAdd(this, _replaceReg, void 0);
+    __privateAdd(this, _replaceCallback, void 0);
+    const {
+      encoding = "cl100k_base",
+      replaceReg = /<\|endoftext\|>/g,
+      replaceCallback = (...args) => ""
+    } = opts;
+    __privateSet(this, _tokenizer, get_encoding(encoding));
+    __privateSet(this, _replaceReg, replaceReg);
+    __privateSet(this, _replaceCallback, replaceCallback);
+  }
+  /**
+   * get the text tokens count
+   * @param text
+   * @returns
+   */
+  getTokenCnt(msg) {
+    if (typeof msg === "object" && msg.tokens)
+      return msg.tokens;
+    msg = typeof msg === "object" ? msg.text : msg;
+    const text = msg.replace(__privateGet(this, _replaceReg), __privateGet(this, _replaceCallback));
+    return __privateMethod(this, _encode, encode_fn).call(this, text).length;
+  }
+};
+_tokenizer = new WeakMap();
+_replaceReg = new WeakMap();
+_replaceCallback = new WeakMap();
+_encode = new WeakSet();
+encode_fn = function(text) {
+  return __privateGet(this, _tokenizer).encode(text);
+};
 
 // src/utils/request.ts
 import axios from "axios";
@@ -124,7 +221,7 @@ function genId() {
 }
 
 // src/ChatGPT.ts
-var _apiKey, _model, _urls, _debug, _requestConfig, _store2, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
+var _apiKey, _model, _urls, _debug2, _requestConfig, _store2, _tokenizer2, _maxTokens, _limitTokensInAMessage, _ignoreServerMessagesInPrompt, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
 var ChatGPT = class {
   constructor(opts) {
     /**
@@ -139,37 +236,62 @@ var ChatGPT = class {
     __privateAdd(this, _apiKey, "");
     __privateAdd(this, _model, "");
     __privateAdd(this, _urls, urls_default);
-    __privateAdd(this, _debug, false);
-    __privateAdd(this, _requestConfig, {});
-    __privateAdd(this, _store2, new ConversationStore());
-    __privateSet(this, _apiKey, opts.apiKey);
-    __privateSet(this, _model, opts.model || "gpt-3.5-turbo");
-    __privateSet(this, _debug, opts.debug || false);
-    __privateSet(this, _requestConfig, opts.requestConfig || {});
+    __privateAdd(this, _debug2, false);
+    __privateAdd(this, _requestConfig, void 0);
+    __privateAdd(this, _store2, void 0);
+    __privateAdd(this, _tokenizer2, void 0);
+    __privateAdd(this, _maxTokens, void 0);
+    __privateAdd(this, _limitTokensInAMessage, void 0);
+    __privateAdd(this, _ignoreServerMessagesInPrompt, void 0);
+    const {
+      apiKey,
+      model = "gpt-3.5-turbo",
+      debug = false,
+      requestConfig = {},
+      storeConfig = {},
+      tokenizerConfig = {},
+      maxTokens = 4096,
+      limitTokensInAMessage = 1e3,
+      ignoreServerMessagesInPrompt = true
+    } = opts;
+    __privateSet(this, _apiKey, apiKey);
+    __privateSet(this, _model, model);
+    __privateSet(this, _debug2, debug);
+    __privateSet(this, _requestConfig, requestConfig);
+    __privateSet(this, _store2, new ConversationStore({
+      ...storeConfig,
+      debug: __privateGet(this, _debug2)
+    }));
+    __privateSet(this, _tokenizer2, new Tokenizer(tokenizerConfig));
+    __privateSet(this, _maxTokens, maxTokens);
+    __privateSet(this, _limitTokensInAMessage, limitTokensInAMessage);
+    __privateSet(this, _ignoreServerMessagesInPrompt, ignoreServerMessagesInPrompt);
   }
   /**
    * send message to ChatGPT server
-   * @param text string new message
-   * @param opts configs
-   * @returns
+   * @param opts.text new message
+   * @param opts.systemPrompt prompt message
+   * @param opts.parentMessageId
    */
   async sendMessage(opts) {
-    var _a, _b;
+    var _a, _b, _c;
     opts = typeof opts === "string" ? { text: opts } : opts;
-    if (opts.systemPrompt) {
-      opts.parentMessageId = void 0;
-      if (opts.parentMessageId)
-        await __privateGet(this, _store2).clear1Conversation(opts.parentMessageId);
+    let { text, systemPrompt = void 0, parentMessageId = void 0 } = opts;
+    if (systemPrompt) {
+      if (parentMessageId)
+        await __privateGet(this, _store2).clear1Conversation(parentMessageId);
+      parentMessageId = void 0;
     }
     const model = __privateGet(this, _model);
     const userMessage = {
       id: genId(),
-      text: opts.text,
+      text,
       role: "user" /* user */,
-      parentMessageId: opts.parentMessageId
+      parentMessageId,
+      tokens: __privateGet(this, _tokenizer2).getTokenCnt(text)
     };
-    const messages = await __privateMethod(this, _makeConversations, makeConversations_fn).call(this, userMessage, opts.systemPrompt);
-    if (__privateGet(this, _debug)) {
+    const messages = await __privateMethod(this, _makeConversations, makeConversations_fn).call(this, userMessage, systemPrompt);
+    if (__privateGet(this, _debug2)) {
       console.log("messages", messages);
     }
     const res = await post(
@@ -186,10 +308,10 @@ var ChatGPT = class {
         ...__privateGet(this, _requestConfig)
       },
       {
-        debug: __privateGet(this, _debug)
+        debug: __privateGet(this, _debug2)
       }
     );
-    if (__privateGet(this, _debug)) {
+    if (__privateGet(this, _debug2)) {
       console.log(
         "response",
         JSON.stringify({
@@ -202,41 +324,51 @@ var ChatGPT = class {
       id: res.id,
       text: (_b = (_a = res == null ? void 0 : res.choices[0]) == null ? void 0 : _a.message) == null ? void 0 : _b.content,
       created: res.created,
-      model: res.model,
       role: "assistant" /* assistant */,
-      parentMessageId: userMessage.id
+      parentMessageId: userMessage.id,
+      tokens: (_c = res == null ? void 0 : res.usage) == null ? void 0 : _c.completion_tokens
     };
-    await __privateGet(this, _store2).set(userMessage);
-    await __privateGet(this, _store2).set(response);
+    const msgsToBeStored = [userMessage, response];
+    if (systemPrompt) {
+      const systemMessage = {
+        id: genId(),
+        text: systemPrompt,
+        role: "system" /* system */,
+        tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
+      };
+      msgsToBeStored.unshift(systemMessage);
+    }
+    await __privateGet(this, _store2).set(msgsToBeStored);
     return response;
   }
 };
 _apiKey = new WeakMap();
 _model = new WeakMap();
 _urls = new WeakMap();
-_debug = new WeakMap();
+_debug2 = new WeakMap();
 _requestConfig = new WeakMap();
 _store2 = new WeakMap();
+_tokenizer2 = new WeakMap();
+_maxTokens = new WeakMap();
+_limitTokensInAMessage = new WeakMap();
+_ignoreServerMessagesInPrompt = new WeakMap();
 _makeConversations = new WeakSet();
 makeConversations_fn = async function(userMessage, prompt) {
-  let parentMessageId = userMessage.parentMessageId;
-  const messages = [];
+  let messages = [];
+  let usedTokens = __privateGet(this, _tokenizer2).getTokenCnt(userMessage.text);
   if (prompt) {
     messages.push({
       role: "system" /* system */,
       content: prompt
     });
   } else {
-    while (parentMessageId && __privateGet(this, _store2).has(parentMessageId)) {
-      const msg = await __privateGet(this, _store2).get(parentMessageId);
-      if (msg) {
-        messages.unshift({
-          role: msg.role,
-          content: msg.text
-        });
-      }
-      parentMessageId = msg == null ? void 0 : msg.parentMessageId;
-    }
+    messages = await __privateGet(this, _store2).findMessages({
+      id: userMessage.parentMessageId,
+      tokenizer: __privateGet(this, _tokenizer2),
+      limit: __privateGet(this, _limitTokensInAMessage),
+      availableTokens: __privateGet(this, _maxTokens) - usedTokens,
+      ignore: __privateGet(this, _ignoreServerMessagesInPrompt)
+    });
   }
   messages.push({
     role: "user" /* user */,

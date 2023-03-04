@@ -126,7 +126,7 @@ export interface IChatGPTParams {
      */
     maxKeys?: number
     /**
-     * Recursive search for historical messages, default 20 messages will be sent to the ChatGPT server
+     * Recursively search for historical messages, default 20 messages will be sent to the ChatGPT server
      */
     maxFindDepth?: number
   }
