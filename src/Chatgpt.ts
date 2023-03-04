@@ -65,9 +65,9 @@ export class ChatGPT {
 
   /**
    * send message to ChatGPT server
-   * @param text string new message
-   * @param opts configs
-   * @returns
+   * @param opts.text new message
+   * @param opts.systemPrompt prompt message
+   * @param opts.parentMessageId
    */
   async sendMessage(
     opts:
