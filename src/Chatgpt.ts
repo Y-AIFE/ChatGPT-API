@@ -41,7 +41,7 @@ interface IChatGPTParams {
 }
 
 // role https://platform.openai.com/docs/guides/chat/introduction
-export default class ChatGPT {
+export class ChatGPT {
   #apiKey = ''
   #model = ''
   #urls = URLS

@@ -1,6 +1,6 @@
 import { stdin, stdout } from 'process'
 import { createInterface } from 'readline'
-import ChatGPT from '../src/Chatgpt'
+import { ChatGPT } from '../src'
 import apiKey from './.key'
 
 function getReadLine() {
@@ -13,12 +13,12 @@ void (async function () {
   let prevRes: any
   let line = ''
   const readline = getReadLine()
-  console.log('---------------------提出你的问题------------------')
+  console.log('---------------------your question------------------')
   while ((line = await readline())) {
     prevRes = await basicRunner(line, prevRes?.id)
-    console.log('---------------------答案------------------------')
+    console.log('---------------------ChatGPT says------------------------')
     console.log(prevRes.text)
-    console.log('---------------------提出你的问题------------------')
+    console.log('---------------------your question------------------')
   }
 })()
 
@@ -26,12 +26,7 @@ const api = new ChatGPT({
   apiKey,
   debug: true,
   requestConfig: {
-    timeout: 1000 * 60,
-    proxy: {
-      protocol: 'http',
-      host: '127.0.0.1',
-      port: 33210,
-    },
+    timeout: 1000 * 600,
   },
 })
 

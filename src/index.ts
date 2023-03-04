@@ -1,1 +1,1 @@
-export * from './Chatgpt'
+export * from './ChatGPT'
