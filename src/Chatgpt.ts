@@ -8,7 +8,7 @@ import {
   ERole,
   ChatGPTHTTPDataMessages,
 } from './types'
-import { get, post } from './utils/request'
+import { post } from './utils/request'
 import URLS from './utils/urls'
 import { genId } from './utils/index'
 
@@ -69,6 +69,7 @@ export class ChatGPT {
     opts = typeof opts === 'string' ? { text: opts } : opts
     if (opts.systemPrompt) {
       opts.parentMessageId = undefined
+      if(opts.parentMessageId) await this.#store.clear1Conversation(opts.parentMessageId)
     }
     const model = this.#model
     const userMessage: IChatGPTUserMessage = {
@@ -134,9 +135,6 @@ export class ChatGPT {
         content: prompt,
       })
     } else {
-      if(this.#debug) {
-        console.log('checking for message history', this.#store)
-      }
       while (parentMessageId && this.#store.has(parentMessageId)) {
         const msg = await this.#store.get(parentMessageId)
         if (msg) {

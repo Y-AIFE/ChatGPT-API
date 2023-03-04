@@ -1,16 +1,35 @@
 {
-  "name": "chatgpt-api-yunyuv",
+  "name": "@yunyuv/chatgpt",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "r": "npx tsx demo/run.ts"
+  "description": "Node.js client for the official ChatGPT API, which supports CommonJS and Node.js V12+",
+  "author": "yunyuv <yunyuv@proton.me>",
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./build/index.d.ts",
+        "default": "./build/index.mjs"
+      },
+      "require": {
+        "types": "./build/index.d.ts",
+        "default": "./build/index.js"
+      }
+    },
+    "./package.json": "./package.json"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "files": [
+    "build/index.js",
+    "build/index.mjs",
+    "build/index.d.ts"
+  ],
+  "repository": "git@github.com:lxfriday/ChatGPT-api-yunyuv.git",
+  "scripts": {
+    "build": "tsup"
+  },
+  "license": "MIT",
   "devDependencies": {
-    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/node": "^18.14.2",
     "@types/uuid": "^9.0.1",
     "prettier": "^2.8.4",
@@ -23,5 +42,22 @@
     "keyv": "^4.5.2",
     "lru-cache": "^7.18.1",
     "uuid": "^9.0.0"
-  }
+  },
+  "engines": {
+    "node": ">=12"
+  },
+  "keywords": [
+    "chatgpt",
+    "openai",
+    "chat",
+    "gpt",
+    "gpt-3",
+    "gpt3",
+    "gpt4",
+    "chatbot",
+    "machine learning",
+    "ai",
+    "ml",
+    "bot"
+  ]
 }

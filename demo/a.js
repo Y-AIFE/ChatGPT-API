@@ -1,11 +1,8 @@
-import apiKey from './.key'
-import { ChatGPT } from '../src'
+const apiKey = require('./.key.js')
+const { ChatGPT } = require('../build')
 
 const api = new ChatGPT({
-  apiKey: apiKey, // get api key 
-  requestConfig: {
-    timeout: 1000 * 600,
-  },
+  apiKey: apiKey, // get api key
 })
 
 async function run() {

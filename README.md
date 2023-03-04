@@ -16,9 +16,47 @@ In addition, this library plans to support most of OpenAI's open HTTP interfaces
 
 As you may often encounter poor ChatGPT website experience, using API interface to ask questions in the future may become more efficient.
 
+## install
+
+Just run
+
+```bash
+npm i @yunyuv/chatgpt
+
+# or
+
+yarn add @yunyuv/chatgpt
+
+# or
+pnpm i @yunyuv/chatgpt
+```
+
 ## usage
 
+The First Example:
 
+![chatgpt](./assets//chatgpt1.gif)
+
+```ts
+// app.ts
+import { ChatGPT } from '@yunyuv/chatgpt'
+
+const api = new ChatGPT({
+  apiKey: 'your api key', // get api key https://platform.openai.com/account/api-keys
+})
+async function run() {
+  const res = await api.createChatCompletion({
+    text: 'please introduce yourself',
+  })
+  console.log(res.text)
+}
+run()
+```
+
+You can get API key at [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys).
+
+
+## Todo
 
 ## ref
 
