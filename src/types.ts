@@ -70,10 +70,10 @@ export interface IChatGPTSystemMessage {
   role: ERole
   parentMessageId?: string
 }
-export type ChatGPTHTTPDataMessages = {
+export type TChatGPTHTTPDataMessage = {
   role: ERole
   content: string
-}[]
+}
 
 export enum ERole {
   /**

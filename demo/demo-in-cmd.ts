@@ -17,7 +17,7 @@ void (async function () {
 
 const api = new ChatGPT({
   apiKey,
-  // debug: true,
+  debug: true,
   requestConfig: {
     timeout: 1000 * 600,
   },

@@ -6,7 +6,7 @@ import {
   IChatGPTResponse,
   IChatGPTUserMessage,
   ERole,
-  ChatGPTHTTPDataMessages,
+  TChatGPTHTTPDataMessage,
 } from './types'
 import { post } from './utils/request'
 import URLS from './utils/urls'
@@ -55,7 +55,6 @@ export class ChatGPT {
     this.#requestConfig = opts.requestConfig || {}
   }
 
-
   /**
    * send message to ChatGPT server
    * @param text string new message
@@ -69,8 +68,9 @@ export class ChatGPT {
   ) {
     opts = typeof opts === 'string' ? { text: opts } : opts
     if (opts.systemPrompt) {
+      if (opts.parentMessageId)
+        await this.#store.clear1Conversation(opts.parentMessageId)
       opts.parentMessageId = undefined
-      if(opts.parentMessageId) await this.#store.clear1Conversation(opts.parentMessageId)
     }
     const model = this.#model
     const userMessage: IChatGPTUserMessage = {
@@ -104,7 +104,8 @@ export class ChatGPT {
       },
     )) as IChatCompletion
     if (this.#debug) {
-      console.log('response', 
+      console.log(
+        'response',
         JSON.stringify({
           ...res,
           choices: [],
@@ -128,26 +129,15 @@ export class ChatGPT {
    * make conversations for http request data.messages
    */
   async #makeConversations(userMessage: IChatGPTUserMessage, prompt?: string) {
-    let parentMessageId: string | undefined = userMessage.parentMessageId
-    const messages: ChatGPTHTTPDataMessages = []
+    let messages: TChatGPTHTTPDataMessage[] = []
     if (prompt) {
       messages.push({
         role: ERole.system,
         content: prompt,
       })
     } else {
-      while (parentMessageId && this.#store.has(parentMessageId)) {
-        const msg = await this.#store.get(parentMessageId)
-        if (msg) {
-          messages.unshift({
-            role: msg.role,
-            content: msg.text,
-          })
-        }
-        parentMessageId = msg?.parentMessageId
-      }
+      messages = await this.#store.findMessages(userMessage.parentMessageId)
     }
-
     messages.push({
       role: ERole.user,
       content: userMessage.text,

@@ -5,6 +5,7 @@ import {
   IChatGPTResponse,
   IChatGPTUserMessage,
   IChatGPTSystemMessage,
+  TChatGPTHTTPDataMessage
 } from './types'
 
 type TCommonMessage =
@@ -17,6 +18,10 @@ type TCommonMessage =
  */
 export default class ConversationStore {
   #store: Keyv<TCommonMessage, any>
+  /**
+   * in case some bad things happen
+   */
+  #maxFindDepth = 30
   constructor() {
     const lru = new LRUCache<string, TCommonMessage>({
       max: 10000,
@@ -63,7 +68,9 @@ export default class ConversationStore {
    */
   async clear1Conversation(id: string) {
     let parentMessageId: string | undefined = id
-    while (parentMessageId && this.has(parentMessageId)) {
+    let cnt = 0
+    while (parentMessageId && cnt < this.#maxFindDepth) {
+      cnt++
       const msg: TCommonMessage | undefined = await this.get(parentMessageId)
       if (msg) {
         await this.delete(msg.id)
@@ -72,7 +79,29 @@ export default class ConversationStore {
     }
     console.log('conversation cleared')
   }
-
+  /**
+   * find messages in a conversation by id
+   * @param id parentMessageId
+   */
+  async findMessages(id: string | undefined) {
+    let parentMessageId: string | undefined = id
+    let cnt = 0
+    const messages: TChatGPTHTTPDataMessage[] = []
+    while (parentMessageId && cnt < this.#maxFindDepth) {
+      cnt++
+      const msg: TCommonMessage | undefined = await this.#store.get(
+        parentMessageId,
+      )
+      if (msg) {
+        messages.unshift({
+          role: msg.role,
+          content: msg.text,
+        })
+      }
+      parentMessageId = msg?.parentMessageId
+    }
+    return messages
+  }
   /**
    * clear the store
    */

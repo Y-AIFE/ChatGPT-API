@@ -2,7 +2,7 @@ const { ChatGPT } = require('@yunyuv/chatgpt')
 const apiKey = require('./.key.js')
 
 const api = new ChatGPT({
-  // debug: true,
+  debug: true,
   apiKey: apiKey, // get api key
 })
 
