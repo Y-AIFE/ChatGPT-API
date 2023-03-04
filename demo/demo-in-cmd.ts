@@ -21,12 +21,21 @@ const api = new ChatGPT({
   requestConfig: {
     timeout: 1000 * 600,
   },
+  storeConfig: {
+    maxKeys: 5000,
+    maxFindDepth: 5
+  },
 })
 
 async function basicRunner(text: string, parentMessageId?: string) {
-  const res = await api.sendMessage({
-    text,
-    parentMessageId,
-  })
-  return res
+  try {
+    const res = await api.sendMessage({
+      text,
+      parentMessageId,
+    })
+    return res
+  } catch(e: any) {
+    console.log('e', e.message)
+    return {}
+  }
 }

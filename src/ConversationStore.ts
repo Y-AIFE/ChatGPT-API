@@ -5,7 +5,8 @@ import {
   IChatGPTResponse,
   IChatGPTUserMessage,
   IChatGPTSystemMessage,
-  TChatGPTHTTPDataMessage
+  TChatGPTHTTPDataMessage,
+  IConversationStoreParams,
 } from './types'
 
 type TCommonMessage =
@@ -18,17 +19,26 @@ type TCommonMessage =
  */
 export default class ConversationStore {
   #store: Keyv<TCommonMessage, any>
+  #lru: LRUCache<string, TCommonMessage>
   /**
    * in case some bad things happen
    */
   #maxFindDepth = 30
-  constructor() {
-    const lru = new LRUCache<string, TCommonMessage>({
-      max: 10000,
+  #debug = false
+  constructor(params: IConversationStoreParams) {
+    params.maxKeys = params.maxKeys || 10000
+    params.maxFindDepth = params.maxFindDepth || 30
+    params.debug = !!params.debug
+    this.#lru = new LRUCache<string, TCommonMessage>({
+      max: params.maxKeys,
     })
     this.#store = new Keyv<TCommonMessage, any>({
-      store: lru,
+      store: this.#lru,
     })
+    this.#maxFindDepth = params.maxFindDepth
+    this.#debug = params.debug
+
+    if (this.#debug) console.log('ConversationStore params', params)
   }
   /**
    * get message by id
@@ -43,8 +53,11 @@ export default class ConversationStore {
    * @param msg
    * @returns
    */
-  async set(msg: TCommonMessage): Promise<boolean> {
-    return await this.#store.set(msg.id, msg)
+  async set(msgs: TCommonMessage[]) {
+    for (const msg of msgs) {
+      await this.#store.set(msg.id, msg)
+    }
+    if (this.#debug) console.log('lru size', this.#lru.size)
   }
   /**
    * check if the id exists in the store
@@ -77,7 +90,6 @@ export default class ConversationStore {
       }
       parentMessageId = msg?.parentMessageId
     }
-    console.log('conversation cleared')
   }
   /**
    * find messages in a conversation by id

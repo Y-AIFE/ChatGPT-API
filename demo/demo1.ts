@@ -2,10 +2,9 @@ import apiKey from './.key'
 import { ChatGPT } from '../src'
 
 const api = new ChatGPT({
-  apiKey: apiKey, // get api key 
-  requestConfig: {
-    timeout: 1000 * 600,
-  },
+  apiKey: apiKey, // get api key
+  debug: true,
+
 })
 
 async function run() {

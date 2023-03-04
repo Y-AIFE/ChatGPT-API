@@ -7,6 +7,7 @@ import {
   IChatGPTUserMessage,
   ERole,
   TChatGPTHTTPDataMessage,
+  IConversationStoreParams,
 } from './types'
 import { post } from './utils/request'
 import URLS from './utils/urls'
@@ -38,6 +39,20 @@ interface IChatGPTParams {
    * axios configs
    */
   requestConfig?: AxiosRequestConfig
+
+  /**
+   * configs for store
+   */
+  storeConfig?: {
+    /**
+     * lru max keys
+     */
+    maxKeys?: number
+    /**
+     * recursion depth
+     */
+    maxFindDepth?: number
+  }
 }
 
 // role https://platform.openai.com/docs/guides/chat/introduction
@@ -47,12 +62,17 @@ export class ChatGPT {
   #urls = URLS
   #debug = false
   #requestConfig?: AxiosRequestConfig = {}
-  #store = new ConversationStore()
+  #store: ConversationStore
   constructor(opts: IChatGPTParams) {
     this.#apiKey = opts.apiKey
     this.#model = opts.model || 'gpt-3.5-turbo'
     this.#debug = opts.debug || false
     this.#requestConfig = opts.requestConfig || {}
+    opts.storeConfig = opts.storeConfig ?? {}
+    this.#store = new ConversationStore({
+      ...opts.storeConfig,
+      debug: this.#debug,
+    })
   }
 
   /**
@@ -104,6 +124,7 @@ export class ChatGPT {
       },
     )) as IChatCompletion
     if (this.#debug) {
+      // log response
       console.log(
         'response',
         JSON.stringify({
@@ -116,12 +137,12 @@ export class ChatGPT {
       id: res.id,
       text: res?.choices[0]?.message?.content,
       created: res.created,
-      model: res.model,
       role: ERole.assistant,
       parentMessageId: userMessage.id,
+      tokens: res?.usage?.completion_tokens,
     }
-    await this.#store.set(userMessage)
-    await this.#store.set(response)
+    userMessage.tokens = res?.usage?.prompt_tokens
+    await this.#store.set([userMessage, response])
     return response
   }
 

@@ -48,9 +48,9 @@ export interface IChatGPTResponse {
   id: string
   text: string
   created: number
-  model: string
   role: ERole
   parentMessageId?: string
+  tokens?: number
 }
 /**
  * user message
@@ -60,6 +60,7 @@ export interface IChatGPTUserMessage {
   text: string
   role: ERole
   parentMessageId?: string
+  tokens?: number
 }
 /**
  * system situation message
@@ -69,6 +70,7 @@ export interface IChatGPTSystemMessage {
   text: string
   role: ERole
   parentMessageId?: string
+  tokens?: number
 }
 export type TChatGPTHTTPDataMessage = {
   role: ERole
@@ -88,4 +90,10 @@ export enum ERole {
    * role is chatgpt
    */
   assistant = 'assistant',
+}
+
+export interface IConversationStoreParams {
+  maxKeys?: number
+  maxFindDepth?: number
+  debug?: boolean
 }
