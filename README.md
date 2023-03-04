@@ -24,7 +24,6 @@ Just run
 npm i @yunyuv/chatgpt
 
 # or
-
 yarn add @yunyuv/chatgpt
 
 # or
