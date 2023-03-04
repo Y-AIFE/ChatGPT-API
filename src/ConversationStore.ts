@@ -1,18 +1,13 @@
 import Keyv from 'keyv'
 import LRUCache from 'lru-cache'
+import Tokenizer from './Tokenizer'
 
 import {
-  IChatGPTResponse,
-  IChatGPTUserMessage,
-  IChatGPTSystemMessage,
   TChatGPTHTTPDataMessage,
   IConversationStoreParams,
+  TCommonMessage,
+  ERole,
 } from './types'
-
-type TCommonMessage =
-  | IChatGPTResponse
-  | IChatGPTUserMessage
-  | IChatGPTSystemMessage
 
 /**
  * conversation manage
@@ -23,20 +18,18 @@ export default class ConversationStore {
   /**
    * in case some bad things happen
    */
-  #maxFindDepth = 30
-  #debug = false
+  #maxFindDepth: number
+  #debug: boolean
   constructor(params: IConversationStoreParams) {
-    params.maxKeys = params.maxKeys || 10000
-    params.maxFindDepth = params.maxFindDepth || 30
-    params.debug = !!params.debug
+    const { maxKeys = 10000, maxFindDepth = 20, debug = false } = params
     this.#lru = new LRUCache<string, TCommonMessage>({
-      max: params.maxKeys,
+      max: maxKeys,
     })
     this.#store = new Keyv<TCommonMessage, any>({
       store: this.#lru,
     })
-    this.#maxFindDepth = params.maxFindDepth
-    this.#debug = params.debug
+    this.#maxFindDepth = maxFindDepth
+    this.#debug = debug
 
     if (this.#debug) console.log('ConversationStore params', params)
   }
@@ -95,22 +88,43 @@ export default class ConversationStore {
    * find messages in a conversation by id
    * @param id parentMessageId
    */
-  async findMessages(id: string | undefined) {
+  async findMessages(opts: {
+    id: string | undefined
+    tokenizer: Tokenizer
+    limit: number
+    availableTokens: number
+    ignore: boolean
+  }) {
+    let {
+      id = undefined,
+      tokenizer,
+      limit,
+      availableTokens,
+      ignore = false,
+    } = opts
     let parentMessageId: string | undefined = id
     let cnt = 0
     const messages: TChatGPTHTTPDataMessage[] = []
     while (parentMessageId && cnt < this.#maxFindDepth) {
-      cnt++
       const msg: TCommonMessage | undefined = await this.#store.get(
         parentMessageId,
       )
-      if (msg) {
-        messages.unshift({
-          role: msg.role,
-          content: msg.text,
-        })
+      if (msg && !(ignore && msg.role === ERole.assistant)) {
+        let tokensCnt = msg.tokens || tokenizer.getTokenCnt(msg.text)
+        if (tokensCnt <= limit) {
+          if (availableTokens < tokensCnt) break
+          messages.unshift({
+            role: msg.role,
+            content: msg.text,
+          })
+          cnt++
+          availableTokens -= tokensCnt
+        }
       }
       parentMessageId = msg?.parentMessageId
+    }
+    if (this.#debug) {
+      console.log('availableTokens', availableTokens)
     }
     return messages
   }

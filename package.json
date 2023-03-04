@@ -38,6 +38,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
+    "@dqbd/tiktoken": "^0.4.0",
     "axios": "^1.3.4",
     "keyv": "^4.5.2",
     "lru-cache": "^7.18.1",

@@ -18,13 +18,11 @@ void (async function () {
 const api = new ChatGPT({
   apiKey,
   debug: true,
-  requestConfig: {
-    timeout: 1000 * 600,
-  },
   storeConfig: {
     maxKeys: 5000,
-    maxFindDepth: 5
+    // maxFindDepth: 5,
   },
+  ignoreServerMessagesInPrompt: true,
 })
 
 async function basicRunner(text: string, parentMessageId?: string) {
@@ -34,7 +32,7 @@ async function basicRunner(text: string, parentMessageId?: string) {
       parentMessageId,
     })
     return res
-  } catch(e: any) {
+  } catch (e: any) {
     console.log('e', e.message)
     return {}
   }
