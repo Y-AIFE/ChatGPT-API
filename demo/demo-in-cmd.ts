@@ -24,7 +24,7 @@ const api = new ChatGPT({
 })
 
 async function basicRunner(text: string, parentMessageId?: string) {
-  const res = await api.createChatCompletion({
+  const res = await api.sendMessage({
     text,
     parentMessageId,
   })

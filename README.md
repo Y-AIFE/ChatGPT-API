@@ -44,7 +44,7 @@ const api = new ChatGPT({
   apiKey: 'your api key', // get api key https://platform.openai.com/account/api-keys
 })
 async function run() {
-  const res = await api.createChatCompletion({
+  const res = await api.sendMessage({
     text: 'please introduce yourself',
   })
   console.log(res.text)
@@ -55,7 +55,7 @@ run()
 You can get API key at [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys).
 
 
-## Todo
+## todo
 
 ## ref
 

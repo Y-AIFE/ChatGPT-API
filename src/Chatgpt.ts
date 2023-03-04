@@ -55,13 +55,14 @@ export class ChatGPT {
     this.#requestConfig = opts.requestConfig || {}
   }
 
+
   /**
    * send message to ChatGPT server
    * @param text string new message
    * @param opts configs
    * @returns
    */
-  async createChatCompletion(
+  async sendMessage(
     opts:
       | { text: string; systemPrompt?: string; parentMessageId?: string }
       | string,

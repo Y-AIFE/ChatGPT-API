@@ -9,7 +9,7 @@ const api = new ChatGPT({
 })
 
 async function run() {
-  const res = await api.createChatCompletion({
+  const res = await api.sendMessage({
     text: 'please introduce yourself',
   })
   console.log(res.text)
