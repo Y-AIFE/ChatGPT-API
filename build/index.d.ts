@@ -53,7 +53,7 @@ declare class ChatGPT {
      * @param opts configs
      * @returns
      */
-    createChatCompletion(opts: {
+    sendMessage(opts: {
         text: string;
         systemPrompt?: string;
         parentMessageId?: string;

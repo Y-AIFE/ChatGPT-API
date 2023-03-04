@@ -153,7 +153,7 @@ var ChatGPT = class {
    * @param opts configs
    * @returns
    */
-  async createChatCompletion(opts) {
+  async sendMessage(opts) {
     var _a, _b;
     opts = typeof opts === "string" ? { text: opts } : opts;
     if (opts.systemPrompt) {
