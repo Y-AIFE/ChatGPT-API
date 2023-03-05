@@ -1,8 +1,8 @@
 {
-  "name": "@yunyuv/chatgpt",
+  "name": "@lxfriday/chatgpt",
   "version": "1.0.2",
   "description": "Node.js client for the official ChatGPT API, which supports CommonJS and Node.js V12+",
-  "author": "yunyuv <yunyuv@proton.me>",
+  "author": "lxfriday <liu3248184446@outlook.com>",
   "main": "./build/index.js",
   "module": "./build/index.js",
   "types": "./build/index.d.ts",

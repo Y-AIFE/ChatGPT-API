@@ -21,13 +21,13 @@ As you may often encounter poor ChatGPT website experience, using API interface 
 Just run
 
 ```bash
-npm i @yunyuv/chatgpt
+npm i @lxfriday/chatgpt
 
 # or
-yarn add @yunyuv/chatgpt
+yarn add @lxfriday/chatgpt
 
 # or
-pnpm i @yunyuv/chatgpt
+pnpm i @lxfriday/chatgpt
 ```
 
 ## usage
@@ -38,7 +38,7 @@ The First Example:
 
 ```ts
 // app.ts
-import { ChatGPT } from '@yunyuv/chatgpt'
+import { ChatGPT } from '@lxfriday/chatgpt'
 
 const api = new ChatGPT({
   apiKey: 'your api key', // get api key https://platform.openai.com/account/api-keys
