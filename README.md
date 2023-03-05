@@ -2,7 +2,7 @@
 <img width="197" src="./assets/icon2.png"/><img width="200" src="./assets/icon1.png" alt="generate by stable diffusion"/>
 </a>
 </div>
-<h1 align="center">ChatGPT-api-yunyuv</h1>
+<h1 align="center">ChatGPT-API</h1>
 
 This is a more universal open-source library for the ChatGPT API that supports the CommonJS module system. Your Node.js version only needs to be above **v12**(The lower versions have not been tested yet) to use it. In general, it's a fairly universal ChatGPT API library that invokes the official ChatGPT HTTP interface directly.
 
