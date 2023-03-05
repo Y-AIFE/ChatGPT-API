@@ -2,6 +2,28 @@ import { AxiosRequestConfig } from 'axios';
 import { TiktokenEmbedding } from '@dqbd/tiktoken';
 
 /**
+ * ChatCompletion 回答
+ */
+interface IChatCompletion {
+    id: string;
+    object: string;
+    created: number;
+    model: string;
+    usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+    };
+    choices: {
+        message: {
+            role: string;
+            content: string;
+        };
+        finish_reason: string;
+        index: number;
+    }[];
+}
+/**
  * response message
  */
 interface IChatGPTResponse {
@@ -12,6 +34,30 @@ interface IChatGPTResponse {
     parentMessageId?: string;
     tokens?: number;
 }
+/**
+ * user message
+ */
+interface IChatGPTUserMessage {
+    id: string;
+    text: string;
+    role: ERole;
+    parentMessageId?: string;
+    tokens?: number;
+}
+/**
+ * system situation message
+ */
+interface IChatGPTSystemMessage {
+    id: string;
+    text: string;
+    role: ERole;
+    parentMessageId?: string;
+    tokens?: number;
+}
+type TChatGPTHTTPDataMessage = {
+    role: ERole;
+    content: string;
+};
 declare enum ERole {
     /**
      * conversation situation
@@ -25,6 +71,11 @@ declare enum ERole {
      * role is chatgpt
      */
     assistant = "assistant"
+}
+interface IConversationStoreParams {
+    maxKeys?: number;
+    maxFindDepth?: number;
+    debug?: boolean;
 }
 interface IChatGPTParams {
     /**
@@ -91,6 +142,7 @@ interface ITokensParams {
      */
     replaceCallback?: (...args: any[]) => string;
 }
+type TCommonMessage = IChatGPTResponse | IChatGPTUserMessage | IChatGPTSystemMessage;
 
 declare class ChatGPT {
     #private;
@@ -108,4 +160,4 @@ declare class ChatGPT {
     } | string): Promise<IChatGPTResponse>;
 }
 
-export { ChatGPT };
+export { ChatGPT, ERole, IChatCompletion, IChatGPTParams, IChatGPTResponse, IChatGPTSystemMessage, IChatGPTUserMessage, IConversationStoreParams, ITokensParams, TChatGPTHTTPDataMessage, TCommonMessage };

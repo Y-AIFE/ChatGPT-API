@@ -39,6 +39,14 @@ function genId() {
   return uuid();
 }
 
+// src/types.ts
+var ERole = /* @__PURE__ */ ((ERole2) => {
+  ERole2["system"] = "system";
+  ERole2["user"] = "user";
+  ERole2["assistant"] = "assistant";
+  return ERole2;
+})(ERole || {});
+
 // src/ConversationStore.ts
 var _store, _lru, _maxFindDepth, _debug;
 var ConversationStore = class {
@@ -394,6 +402,7 @@ genAuthorization_fn = function() {
   return `Bearer ${__privateGet(this, _apiKey)}`;
 };
 export {
-  ChatGPT
+  ChatGPT,
+  ERole
 };
 //# sourceMappingURL=index.mjs.map

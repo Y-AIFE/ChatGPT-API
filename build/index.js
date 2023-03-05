@@ -52,7 +52,8 @@ var __privateMethod = (obj, member, method) => {
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
-  ChatGPT: () => ChatGPT
+  ChatGPT: () => ChatGPT,
+  ERole: () => ERole
 });
 module.exports = __toCommonJS(src_exports);
 
@@ -73,6 +74,14 @@ function log(...args) {
 function genId() {
   return (0, import_uuid.v4)();
 }
+
+// src/types.ts
+var ERole = /* @__PURE__ */ ((ERole2) => {
+  ERole2["system"] = "system";
+  ERole2["user"] = "user";
+  ERole2["assistant"] = "assistant";
+  return ERole2;
+})(ERole || {});
 
 // src/ConversationStore.ts
 var _store, _lru, _maxFindDepth, _debug;
@@ -430,6 +439,7 @@ genAuthorization_fn = function() {
 };
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  ChatGPT
+  ChatGPT,
+  ERole
 });
 //# sourceMappingURL=index.js.map
