@@ -2,8 +2,22 @@ import { getReadLine } from '../src/utils'
 import { ChatGPT } from '../src'
 import apiKey from './.key'
 
+const api = new ChatGPT({
+  apiKey,
+  debug: true,
+  requestConfig: {
+    timeout: 1000 * 600,
+  },
+})
+
 void (async function () {
-  let prevRes: any
+  console.log('---------------------your question------------------')
+  console.log({ text: '说说你的看法', systemPrompt: '你是一个前端技术专家' })
+  let prevRes = await api.sendMessage({
+    text: '说说你的看法',
+    systemPrompt: '你是一个前端技术专家',
+  })
+  console.log(prevRes.text)
   let line = ''
   const readline = getReadLine()
   console.log('---------------------your question------------------')
@@ -14,14 +28,6 @@ void (async function () {
     console.log('---------------------your question------------------')
   }
 })()
-
-const api = new ChatGPT({
-  apiKey,
-  // debug: true,
-  requestConfig: {
-    timeout: 1000 * 600,
-  },
-})
 
 async function basicRunner(text: string, parentMessageId?: string) {
   const res = await api.sendMessage({

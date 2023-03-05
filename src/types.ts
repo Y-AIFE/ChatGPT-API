@@ -122,11 +122,11 @@ export interface IChatGPTParams {
    */
   storeConfig?: {
     /**
-     * lru max keys, default 10000
+     * lru max keys, default `100000`
      */
     maxKeys?: number
     /**
-     * Recursively search for historical messages, default 20 messages will be sent to the ChatGPT server
+     * Recursively search for historical messages, default `20` messages will be sent to the ChatGPT server
      */
     maxFindDepth?: number
   }

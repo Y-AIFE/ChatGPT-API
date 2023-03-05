@@ -21,7 +21,7 @@ export default class ConversationStore {
   #maxFindDepth: number
   #debug: boolean
   constructor(params: IConversationStoreParams) {
-    const { maxKeys = 10000, maxFindDepth = 20, debug = false } = params
+    const { maxKeys = 100000, maxFindDepth = 20, debug = false } = params
     this.#lru = new LRUCache<string, TCommonMessage>({
       max: maxKeys,
     })
