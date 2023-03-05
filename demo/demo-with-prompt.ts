@@ -5,9 +5,6 @@ import apiKey from './.key'
 const api = new ChatGPT({
   apiKey,
   debug: true,
-  requestConfig: {
-    timeout: 1000 * 600,
-  },
 })
 
 void (async function () {

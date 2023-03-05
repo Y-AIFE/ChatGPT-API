@@ -46,7 +46,7 @@ export class ChatGPT {
       tokenizerConfig = {},
       maxTokens = 4096,
       limitTokensInAMessage = 1000,
-      ignoreServerMessagesInPrompt = true,
+      ignoreServerMessagesInPrompt = false,
     } = opts
 
     this.#apiKey = apiKey

@@ -3,6 +3,7 @@ const apiKey = require('./.key.js')
 
 const api = new ChatGPT({
   apiKey: apiKey, // get api key
+  ignoreServerMessagesInPrompt: false,
 })
 
 async function run() {
