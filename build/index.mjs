@@ -34,7 +34,7 @@ var ConversationStore = class {
      */
     __privateAdd(this, _maxFindDepth, void 0);
     __privateAdd(this, _debug, void 0);
-    const { maxKeys = 1e4, maxFindDepth = 20, debug = false } = params;
+    const { maxKeys = 1e5, maxFindDepth = 20, debug = false } = params;
     __privateSet(this, _lru, new LRUCache({
       max: maxKeys
     }));
