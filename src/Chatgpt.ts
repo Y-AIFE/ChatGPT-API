@@ -96,15 +96,17 @@ export class ChatGPT {
     const res = (await post(
       {
         url: this.#urls.createChatCompletion,
+        ...this.#requestConfig,
         headers: {
           Authorization: this.#genAuthorization(),
           'Content-Type': 'application/json',
+          ...{...(this.#requestConfig.headers || {})}
         },
         data: {
           model,
           messages,
+          ...{...(this.#requestConfig.data || {})}
         },
-        ...this.#requestConfig,
       },
       {
         debug: this.#debug,

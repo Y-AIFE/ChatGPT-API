@@ -4,7 +4,11 @@ import { ChatGPT } from '../src'
 const api = new ChatGPT({
   apiKey: apiKey, // get api key
   debug: true,
-
+  requestConfig: {
+    headers: {
+      requestid: '10086'
+    }
+  },
 })
 
 async function run() {
