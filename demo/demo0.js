@@ -1,4 +1,4 @@
-const { ChatGPT } = require('@lxfriady/chatgpt')
+const { ChatGPT } = require('@lxfriday/chatgpt')
 const apiKey = require('./.key.js')
 
 const api = new ChatGPT({
