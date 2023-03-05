@@ -13,7 +13,7 @@ import {
 } from './types'
 import { post } from './utils/request'
 import URLS from './utils/urls'
-import { genId } from './utils/index'
+import { genId, log } from './utils'
 
 // https://platform.openai.com/docs/api-reference/chat
 // curl https://api.openai.com/v1/chat/completions \
@@ -91,7 +91,7 @@ export class ChatGPT {
     }
     const messages = await this.#makeConversations(userMessage, systemPrompt)
     if (this.#debug) {
-      console.log('messages', messages)
+      log('messages', messages)
     }
     const res = (await post(
       {
@@ -114,7 +114,7 @@ export class ChatGPT {
     )) as IChatCompletion
     if (this.#debug) {
       // log response
-      console.log(
+      log(
         'response',
         JSON.stringify({
           ...res,

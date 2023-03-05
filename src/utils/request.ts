@@ -1,5 +1,6 @@
 import axios from 'axios'
-import type { RawAxiosRequestConfig } from 'axios'
+import { RawAxiosRequestConfig } from 'axios'
+import { log } from './index'
 
 interface IRequestOpts {
   debug?: boolean
@@ -10,7 +11,10 @@ export async function get(config: RawAxiosRequestConfig, opts: IRequestOpts) {
     method: 'GET',
   })
   if (opts.debug) {
-    console.log({ headers: ins.defaults.headers, data: ins.defaults.data })
+    ins.interceptors.request.use((config) => {
+      log('axios config', config)
+      return config
+    })
   }
   return (await ins({ ...config })).data
 }
@@ -20,7 +24,7 @@ export async function post(config: RawAxiosRequestConfig, opts: IRequestOpts) {
   })
   if (opts.debug) {
     ins.interceptors.request.use((config) => {
-      console.log(config)
+      log('axios config', config)
       return config
     })
   }

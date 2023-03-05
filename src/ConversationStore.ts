@@ -1,6 +1,7 @@
 import Keyv from 'keyv'
 import LRUCache from 'lru-cache'
 import Tokenizer from './Tokenizer'
+import { log } from './utils'
 
 import {
   TChatGPTHTTPDataMessage,
@@ -31,7 +32,7 @@ export default class ConversationStore {
     this.#maxFindDepth = maxFindDepth
     this.#debug = debug
 
-    if (this.#debug) console.log('ConversationStore params', params)
+    if (this.#debug) log('ConversationStore params', params)
   }
   /**
    * get message by id
@@ -50,7 +51,7 @@ export default class ConversationStore {
     for (const msg of msgs) {
       await this.#store.set(msg.id, msg)
     }
-    if (this.#debug) console.log('lru size', this.#lru.size)
+    if (this.#debug) log('lru size', this.#lru.size)
   }
   /**
    * check if the id exists in the store
@@ -124,7 +125,7 @@ export default class ConversationStore {
       parentMessageId = msg?.parentMessageId
     }
     if (this.#debug) {
-      console.log('availableTokens', availableTokens)
+      log('availableTokens', availableTokens)
     }
     return messages
   }

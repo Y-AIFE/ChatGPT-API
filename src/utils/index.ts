@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid'
 import { stdin, stdout } from 'process'
 import { createInterface } from 'readline'
+export * from './log'
 
 export function getReadLine() {
   const rl = createInterface({ input: stdin, output: stdout })
