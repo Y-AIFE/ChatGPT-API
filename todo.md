@@ -1,9 +1,4 @@
-- 注意，不要重复 new ChatGPT
-- 基本用法
-- 带 prompt
-- 使用代理
-- 设置超时时间
-- 在命令行中连续输入
-- tokens
+- README 完善
+  - 注意，不要重复 new ChatGPT
 - log 带颜色
-- 测试 lru 占用内容的情况
+- 处理 systemprompt 丢失问题

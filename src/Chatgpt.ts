@@ -136,6 +136,7 @@ export class ChatGPT {
         role: ERole.system,
         tokens: this.#tokenizer.getTokenCnt(systemPrompt),
       }
+      userMessage.parentMessageId = systemMessage.id
       msgsToBeStored.unshift(systemMessage)
     }
     await this.#store.set(msgsToBeStored)
