@@ -24,7 +24,7 @@
     "build/index.mjs",
     "build/index.d.ts"
   ],
-  "repository": "git@github.com:lxfriday/ChatGPT-api-yunyuv.git",
+  "repository": "git@github.com:lxfriday/ChatGPT-API.git",
   "scripts": {
     "build": "tsup"
   },
