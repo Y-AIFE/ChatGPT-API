@@ -58,67 +58,71 @@ You can get API key at [https://platform.openai.com/account/api-keys](https://pl
 
 ```typescript
 interface IChatGPTParams {
-  /**
-   * apiKey, you can get it in https://platform.openai.com/account/api-keys,You can apply for up to 5 at most.
-   */
-  apiKey: string;
-  /**
-   * model，default is 'gpt-3.5-turbo'
-   */
-  model?: string;
-  /**
-   * print logs
-   */
-  debug?: boolean;
-  /**
-   * axios configs
-   */
-  requestConfig?: AxiosRequestConfig;
-  /**
-   * configs for store
-   */
-  storeConfig?: {
     /**
-     * lru max keys, default 10000
+     * apiKey, you can get it in https://platform.openai.com/account/api-keys,You can apply for up to 5 at most.
      */
-    maxKeys?: number;
+    apiKey: string;
     /**
-     * Recursively search for historical messages, default 20 messages will be sent to the ChatGPT server
+     * model，default is 'gpt-3.5-turbo'
      */
-    maxFindDepth?: number;
-  };
-  tokenizerConfig?: ITokensParams;
-  /**
-   * the maximum number of tokens when initiating a request, including prompts and completion. The default value is 4096.
-   */
-  maxTokens?: number;
-  /**
-   * The maximum number of tokens for a single message. It is used to prevent from sending too many tokens to the ChatGPT server.
-   * If this number is exceeded, the message will be deleted and not passed on as a prompt to the chatGPT server. The default value is `1000`.
-   * - notice: **Maybe the message returned by ChatGPT should not be sent to the ChatGPT server as a prompt for the next conversation**.
-   */
-  limitTokensInAMessage?: number;
-  /**
-   * same reason as `limitTokensInAMessage`, **Maybe the message returned by ChatGPT should not be sent to the ChatGPT server as a prompt for the next conversation**, default value is `true`
-   * - `true`: will ignore ChatGPT server message in the next sendMessage, and will only refer to `limitTokensInAMessage` in history messages
-   * - `false`: will only refer to `limitTokensInAMessage` in history messages
-   */
-  ignoreServerMessagesInPrompt?: boolean;
+    model?: string;
+    /**
+     * print logs
+     */
+    debug?: boolean;
+    /**
+     * axios configs
+     */
+    requestConfig?: AxiosRequestConfig;
+    /**
+     * configs for store
+     */
+    storeConfig?: {
+        /**
+         * lru max keys, default `100000`
+         */
+        maxKeys?: number;
+        /**
+         * Recursively search for historical messages, default `20` messages will be sent to the ChatGPT server
+         */
+        maxFindDepth?: number;
+    };
+    tokenizerConfig?: ITokensParams;
+    /**
+     * the maximum number of tokens when initiating a request, including prompts and completion. The default value is 4096.
+     */
+    maxTokens?: number;
+    /**
+     * The maximum number of tokens for a single message. It is used to prevent from sending too many tokens to the ChatGPT server.
+     * If this number is exceeded, the message will be deleted and not passed on as a prompt to the chatGPT server. The default value is `1000`.
+     * - notice: **Maybe the message returned by ChatGPT should not be sent to the ChatGPT server as a prompt for the next conversation**.
+     */
+    limitTokensInAMessage?: number;
+    /**
+     * same reason as `limitTokensInAMessage`, **Maybe the message returned by ChatGPT should not be sent to the ChatGPT server as a prompt for the next conversation**, default value is `false`
+     * - `true`: will ignore ChatGPT server message in the next sendMessage, and will only refer to `limitTokensInAMessage` in history messages
+     * - `false`: will only refer to `limitTokensInAMessage` in history messages
+     */
+    ignoreServerMessagesInPrompt?: boolean;
 }
 ```
 
 ```typescript
-/**
- * send message to ChatGPT server
- * @param opts.text new message
- * @param opts.systemPrompt prompt message
- * @param opts.parentMessageId
- */
-sendMessage(opts: {
-  text: string;
-  systemPrompt?: string;
-  parentMessageId?: string;
-} | string): Promise<IChatGPTResponse>;
+declare class ChatGPT {
+    #private;
+    constructor(opts: IChatGPTParams);
+    /**
+     * send message to ChatGPT server
+     * @param opts.text new message
+     * @param opts.systemPrompt prompt message
+     * @param opts.parentMessageId
+     */
+    sendMessage(opts: {
+        text: string;
+        systemPrompt?: string;
+        parentMessageId?: string;
+    } | string): Promise<IChatGPTResponse>;
+}
 ```
 
 ## demos

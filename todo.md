@@ -2,4 +2,3 @@
   - 注意，不要重复 new ChatGPT
   - 自己定义 request.headers
   - 自己定义 request.data
-- log 带颜色

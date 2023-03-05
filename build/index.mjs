@@ -24,6 +24,22 @@ var __privateMethod = (obj, member, method) => {
 // src/ConversationStore.ts
 import Keyv from "keyv";
 import LRUCache from "lru-cache";
+
+// src/utils/index.ts
+import { v4 as uuid } from "uuid";
+
+// src/utils/log.ts
+function log(...args) {
+  console.log("----------------------------------");
+  console.log(...args);
+}
+
+// src/utils/index.ts
+function genId() {
+  return uuid();
+}
+
+// src/ConversationStore.ts
 var _store, _lru, _maxFindDepth, _debug;
 var ConversationStore = class {
   constructor(params) {
@@ -44,7 +60,7 @@ var ConversationStore = class {
     __privateSet(this, _maxFindDepth, maxFindDepth);
     __privateSet(this, _debug, debug);
     if (__privateGet(this, _debug))
-      console.log("ConversationStore params", params);
+      log("ConversationStore params", params);
   }
   /**
    * get message by id
@@ -64,7 +80,7 @@ var ConversationStore = class {
       await __privateGet(this, _store).set(msg.id, msg);
     }
     if (__privateGet(this, _debug))
-      console.log("lru size", __privateGet(this, _lru).size);
+      log("lru size", __privateGet(this, _lru).size);
   }
   /**
    * check if the id exists in the store
@@ -133,7 +149,7 @@ var ConversationStore = class {
       parentMessageId = msg == null ? void 0 : msg.parentMessageId;
     }
     if (__privateGet(this, _debug)) {
-      console.log("availableTokens", availableTokens);
+      log("availableTokens", availableTokens);
     }
     return messages;
   }
@@ -196,7 +212,7 @@ async function post(config, opts) {
   });
   if (opts.debug) {
     ins.interceptors.request.use((config2) => {
-      console.log(config2);
+      log("axios config", config2);
       return config2;
     });
   }
@@ -213,12 +229,6 @@ var urls = {
   // post
 };
 var urls_default = urls;
-
-// src/utils/index.ts
-import { v4 as uuid } from "uuid";
-function genId() {
-  return uuid();
-}
 
 // src/ChatGPT.ts
 var _apiKey, _model, _urls, _debug2, _requestConfig, _store2, _tokenizer2, _maxTokens, _limitTokensInAMessage, _ignoreServerMessagesInPrompt, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
@@ -252,7 +262,7 @@ var ChatGPT = class {
       tokenizerConfig = {},
       maxTokens = 4096,
       limitTokensInAMessage = 1e3,
-      ignoreServerMessagesInPrompt = true
+      ignoreServerMessagesInPrompt = false
     } = opts;
     __privateSet(this, _apiKey, apiKey);
     __privateSet(this, _model, model);
@@ -292,27 +302,29 @@ var ChatGPT = class {
     };
     const messages = await __privateMethod(this, _makeConversations, makeConversations_fn).call(this, userMessage, systemPrompt);
     if (__privateGet(this, _debug2)) {
-      console.log("messages", messages);
+      log("messages", messages);
     }
     const res = await post(
       {
         url: __privateGet(this, _urls).createChatCompletion,
+        ...__privateGet(this, _requestConfig),
         headers: {
           Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          ...{ ...__privateGet(this, _requestConfig).headers || {} }
         },
         data: {
           model,
-          messages
-        },
-        ...__privateGet(this, _requestConfig)
+          messages,
+          ...{ ...__privateGet(this, _requestConfig).data || {} }
+        }
       },
       {
         debug: __privateGet(this, _debug2)
       }
     );
     if (__privateGet(this, _debug2)) {
-      console.log(
+      log(
         "response",
         JSON.stringify({
           ...res,
@@ -336,6 +348,7 @@ var ChatGPT = class {
         role: "system" /* system */,
         tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
       };
+      userMessage.parentMessageId = systemMessage.id;
       msgsToBeStored.unshift(systemMessage);
     }
     await __privateGet(this, _store2).set(msgsToBeStored);
