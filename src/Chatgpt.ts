@@ -172,6 +172,10 @@ export class ChatGPT {
     return messages
   }
 
+  async clear1Conversation(parentMessageId?: string) {
+    return await this.#store.clear1Conversation(parentMessageId)
+  }
+
   /**
    * generate HTTP Authorization
    * @returns
