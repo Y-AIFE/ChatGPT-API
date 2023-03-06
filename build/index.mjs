@@ -362,6 +362,9 @@ var ChatGPT = class {
     await __privateGet(this, _store2).set(msgsToBeStored);
     return response;
   }
+  async clear1Conversation(parentMessageId) {
+    return await __privateGet(this, _store2).clear1Conversation(parentMessageId);
+  }
 };
 _apiKey = new WeakMap();
 _model = new WeakMap();

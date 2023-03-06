@@ -158,6 +158,7 @@ declare class ChatGPT {
         systemPrompt?: string;
         parentMessageId?: string;
     } | string): Promise<IChatGPTResponse>;
+    clear1Conversation(parentMessageId?: string): Promise<void>;
 }
 
 export { ChatGPT, ERole, IChatCompletion, IChatGPTParams, IChatGPTResponse, IChatGPTSystemMessage, IChatGPTUserMessage, IConversationStoreParams, ITokensParams, TChatGPTHTTPDataMessage, TCommonMessage };
