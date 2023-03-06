@@ -73,7 +73,7 @@ export default class ConversationStore {
    * clear one conversation，it will be used when you set a new system prompt，which means that you will be in a new context，so early messages will be deleted
    * @param id last conversation id
    */
-  async clear1Conversation(id: string) {
+  async clear1Conversation(id?: string) {
     let parentMessageId: string | undefined = id
     let cnt = 0
     while (parentMessageId && cnt < this.#maxFindDepth) {
