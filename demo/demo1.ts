@@ -4,18 +4,16 @@ import { ChatGPT } from '../src'
 const api = new ChatGPT({
   apiKey: apiKey, // get api key
   debug: true,
-  requestConfig: {
-    headers: {
-      requestid: '10086'
-    }
-  },
 })
 
 async function run() {
   const res = await api.sendMessage({
-    text: 'please introduce yourself',
+    text: '用 Vue3 写一段代码',
+    onProgress(t) {
+      console.log('[onProgress]', t)
+    }
   })
-  console.log(res.text)
+  console.log(res)
 }
 
 run()
