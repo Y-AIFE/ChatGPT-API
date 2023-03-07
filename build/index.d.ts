@@ -157,6 +157,7 @@ declare class ChatGPT {
         text: string;
         systemPrompt?: string;
         parentMessageId?: string;
+        onProgress?: (t: string) => void;
     } | string): Promise<IChatGPTResponse>;
     clear1Conversation(parentMessageId?: string): Promise<void>;
 }
