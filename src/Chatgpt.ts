@@ -105,114 +105,125 @@ export class ChatGPT {
         log('messages', messages)
       }
       if (onProgress) {
-        const stream = await post(
-          {
-            url: this.#urls.createChatCompletion,
-            ...this.#requestConfig,
-            headers: {
-              Authorization: this.#genAuthorization(),
-              'Content-Type': 'application/json',
-              ...{ ...(this.#requestConfig.headers || {}) },
+        try {
+          const stream = await post(
+            {
+              url: this.#urls.createChatCompletion,
+              ...this.#requestConfig,
+              headers: {
+                Authorization: this.#genAuthorization(),
+                'Content-Type': 'application/json',
+                ...{ ...(this.#requestConfig.headers || {}) },
+              },
+              data: {
+                stream: true,
+                model,
+                messages,
+                ...{ ...(this.#requestConfig.data || {}) },
+              },
+              responseType: 'stream',
             },
-            data: {
-              stream: true,
-              model,
-              messages,
-              ...{ ...(this.#requestConfig.data || {}) },
+            {
+              debug: this.#debug,
             },
-            responseType: 'stream',
-          },
-          {
-            debug: this.#debug,
-          },
-        )
-        const response: IChatGPTResponse = {
-          id: genId(),
-          text: '',
-          created: Math.floor(Date.now() / 1000),
-          role: ERole.assistant,
-          parentMessageId: userMessage.id,
-          tokens: 0,
-        }
-        stream.on('data', (buf: any) => {
-          try {
-            const dataArr = buf.toString().split('\n')
-            let onDataPieceText = ''
-            for (const dataStr of dataArr) {
-              // split 之后的空行，或者结束通知
-              if (dataStr.indexOf('data: ') !== 0 || dataStr === 'data: [DONE]')
-                continue
-              const parsedData = JSON.parse(dataStr.slice(6)) // [data: ]
-              const pieceText = parsedData.choices[0].delta.content || ''
-              onDataPieceText += pieceText
-              // if (pieceText === '') {
-              //   console.log('[empty pieceText]', dataStr)
-              // }
-            }
-            if (typeof onProgress === 'function') {
-              onProgress(onDataPieceText)
-            }
-            response.text += onDataPieceText
-          } catch (e) {
-            log('[chatgpt api err]', e)
-          }
-        })
-
-        stream.on('end', () => {
-          response.tokens = this.#tokenizer.getTokenCnt(response.text)
-          resolve(response)
-        })
-      } else {
-        const res = (await post(
-          {
-            url: this.#urls.createChatCompletion,
-            ...this.#requestConfig,
-            headers: {
-              Authorization: this.#genAuthorization(),
-              'Content-Type': 'application/json',
-              ...{ ...(this.#requestConfig.headers || {}) },
-            },
-            data: {
-              model,
-              messages,
-              ...{ ...(this.#requestConfig.data || {}) },
-            },
-          },
-          {
-            debug: this.#debug,
-          },
-        )) as IChatCompletion
-        if (this.#debug) {
-          // log response
-          log(
-            'response',
-            JSON.stringify({
-              ...res,
-              choices: [],
-            }),
           )
-        }
-        const response: IChatGPTResponse = {
-          id: genId(),
-          text: res?.choices[0]?.message?.content,
-          created: res.created,
-          role: ERole.assistant,
-          parentMessageId: userMessage.id,
-          tokens: res?.usage?.completion_tokens,
-        }
-        const msgsToBeStored = [userMessage, response]
-        if (systemPrompt) {
-          const systemMessage: IChatGPTSystemMessage = {
+          const response: IChatGPTResponse = {
             id: genId(),
-            text: systemPrompt,
-            role: ERole.system,
-            tokens: this.#tokenizer.getTokenCnt(systemPrompt),
+            text: '',
+            created: Math.floor(Date.now() / 1000),
+            role: ERole.assistant,
+            parentMessageId: userMessage.id,
+            tokens: 0,
           }
-          userMessage.parentMessageId = systemMessage.id
-          msgsToBeStored.unshift(systemMessage)
+          stream.on('data', (buf: any) => {
+            try {
+              const dataArr = buf.toString().split('\n')
+              let onDataPieceText = ''
+              for (const dataStr of dataArr) {
+                // split 之后的空行，或者结束通知
+                if (
+                  dataStr.indexOf('data: ') !== 0 ||
+                  dataStr === 'data: [DONE]'
+                )
+                  continue
+                const parsedData = JSON.parse(dataStr.slice(6)) // [data: ]
+                const pieceText = parsedData.choices[0].delta.content || ''
+                onDataPieceText += pieceText
+                // if (pieceText === '') {
+                //   console.log('[empty pieceText]', dataStr)
+                // }
+              }
+              if (typeof onProgress === 'function') {
+                onProgress(onDataPieceText)
+              }
+              response.text += onDataPieceText
+            } catch (e) {
+              log('[chatgpt api err]', e)
+            }
+          })
+
+          stream.on('end', () => {
+            response.tokens = this.#tokenizer.getTokenCnt(response.text)
+            resolve(response)
+          })
+        } catch (e) {
+          reject(e)
         }
-        await this.#store.set(msgsToBeStored)
-        resolve(response)
+      } else {
+        try {
+          const res = (await post(
+            {
+              url: this.#urls.createChatCompletion,
+              ...this.#requestConfig,
+              headers: {
+                Authorization: this.#genAuthorization(),
+                'Content-Type': 'application/json',
+                ...{ ...(this.#requestConfig.headers || {}) },
+              },
+              data: {
+                model,
+                messages,
+                ...{ ...(this.#requestConfig.data || {}) },
+              },
+            },
+            {
+              debug: this.#debug,
+            },
+          )) as IChatCompletion
+          if (this.#debug) {
+            // log response
+            log(
+              'response',
+              JSON.stringify({
+                ...res,
+                choices: [],
+              }),
+            )
+          }
+          const response: IChatGPTResponse = {
+            id: genId(),
+            text: res?.choices[0]?.message?.content,
+            created: res.created,
+            role: ERole.assistant,
+            parentMessageId: userMessage.id,
+            tokens: res?.usage?.completion_tokens,
+          }
+          const msgsToBeStored = [userMessage, response]
+          if (systemPrompt) {
+            const systemMessage: IChatGPTSystemMessage = {
+              id: genId(),
+              text: systemPrompt,
+              role: ERole.system,
+              tokens: this.#tokenizer.getTokenCnt(systemPrompt),
+            }
+            userMessage.parentMessageId = systemMessage.id
+            msgsToBeStored.unshift(systemMessage)
+          }
+          await this.#store.set(msgsToBeStored)
+          resolve(response)
+        } catch (e) {
+          reject(e)
+        }
       }
     })
   }
