@@ -319,108 +319,116 @@ var ChatGPT = class {
         log("messages", messages);
       }
       if (onProgress) {
-        const stream = await post(
-          {
-            url: __privateGet(this, _urls).createChatCompletion,
-            ...__privateGet(this, _requestConfig),
-            headers: {
-              Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
-              "Content-Type": "application/json",
-              ...{ ...__privateGet(this, _requestConfig).headers || {} }
+        try {
+          const stream = await post(
+            {
+              url: __privateGet(this, _urls).createChatCompletion,
+              ...__privateGet(this, _requestConfig),
+              headers: {
+                Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
+                "Content-Type": "application/json",
+                ...{ ...__privateGet(this, _requestConfig).headers || {} }
+              },
+              data: {
+                stream: true,
+                model,
+                messages,
+                ...{ ...__privateGet(this, _requestConfig).data || {} }
+              },
+              responseType: "stream"
             },
-            data: {
-              stream: true,
-              model,
-              messages,
-              ...{ ...__privateGet(this, _requestConfig).data || {} }
-            },
-            responseType: "stream"
-          },
-          {
-            debug: __privateGet(this, _debug2)
-          }
-        );
-        const response = {
-          id: genId(),
-          text: "",
-          created: Math.floor(Date.now() / 1e3),
-          role: "assistant" /* assistant */,
-          parentMessageId: userMessage.id,
-          tokens: 0
-        };
-        stream.on("data", (buf) => {
-          try {
-            const dataArr = buf.toString().split("\n");
-            let onDataPieceText = "";
-            for (const dataStr of dataArr) {
-              if (dataStr.indexOf("data: ") !== 0 || dataStr === "data: [DONE]")
-                continue;
-              const parsedData = JSON.parse(dataStr.slice(6));
-              const pieceText = parsedData.choices[0].delta.content || "";
-              onDataPieceText += pieceText;
+            {
+              debug: __privateGet(this, _debug2)
             }
-            if (typeof onProgress === "function") {
-              onProgress(onDataPieceText);
-            }
-            response.text += onDataPieceText;
-          } catch (e) {
-            log("[chatgpt api err]", e);
-          }
-        });
-        stream.on("end", () => {
-          response.tokens = __privateGet(this, _tokenizer2).getTokenCnt(response.text);
-          resolve(response);
-        });
-      } else {
-        const res = await post(
-          {
-            url: __privateGet(this, _urls).createChatCompletion,
-            ...__privateGet(this, _requestConfig),
-            headers: {
-              Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
-              "Content-Type": "application/json",
-              ...{ ...__privateGet(this, _requestConfig).headers || {} }
-            },
-            data: {
-              model,
-              messages,
-              ...{ ...__privateGet(this, _requestConfig).data || {} }
-            }
-          },
-          {
-            debug: __privateGet(this, _debug2)
-          }
-        );
-        if (__privateGet(this, _debug2)) {
-          log(
-            "response",
-            JSON.stringify({
-              ...res,
-              choices: []
-            })
           );
-        }
-        const response = {
-          id: genId(),
-          text: (_b = (_a = res == null ? void 0 : res.choices[0]) == null ? void 0 : _a.message) == null ? void 0 : _b.content,
-          created: res.created,
-          role: "assistant" /* assistant */,
-          parentMessageId: userMessage.id,
-          tokens: (_c = res == null ? void 0 : res.usage) == null ? void 0 : _c.completion_tokens
-        };
-        const msgsToBeStored = [userMessage, response];
-        if (systemPrompt) {
-          const systemMessage = {
+          const response = {
             id: genId(),
-            text: systemPrompt,
-            role: "system" /* system */,
-            tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
+            text: "",
+            created: Math.floor(Date.now() / 1e3),
+            role: "assistant" /* assistant */,
+            parentMessageId: userMessage.id,
+            tokens: 0
           };
-          userMessage.parentMessageId = systemMessage.id;
-          msgsToBeStored.unshift(systemMessage);
+          stream.on("data", (buf) => {
+            try {
+              const dataArr = buf.toString().split("\n");
+              let onDataPieceText = "";
+              for (const dataStr of dataArr) {
+                if (dataStr.indexOf("data: ") !== 0 || dataStr === "data: [DONE]")
+                  continue;
+                const parsedData = JSON.parse(dataStr.slice(6));
+                const pieceText = parsedData.choices[0].delta.content || "";
+                onDataPieceText += pieceText;
+              }
+              if (typeof onProgress === "function") {
+                onProgress(onDataPieceText);
+              }
+              response.text += onDataPieceText;
+            } catch (e) {
+              log("[chatgpt api err]", e);
+            }
+          });
+          stream.on("end", () => {
+            response.tokens = __privateGet(this, _tokenizer2).getTokenCnt(response.text);
+            resolve(response);
+          });
+        } catch (e) {
+          reject(e);
         }
-        await __privateGet(this, _store2).set(msgsToBeStored);
-        resolve(response);
+      } else {
+        try {
+          const res = await post(
+            {
+              url: __privateGet(this, _urls).createChatCompletion,
+              ...__privateGet(this, _requestConfig),
+              headers: {
+                Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
+                "Content-Type": "application/json",
+                ...{ ...__privateGet(this, _requestConfig).headers || {} }
+              },
+              data: {
+                model,
+                messages,
+                ...{ ...__privateGet(this, _requestConfig).data || {} }
+              }
+            },
+            {
+              debug: __privateGet(this, _debug2)
+            }
+          );
+          if (__privateGet(this, _debug2)) {
+            log(
+              "response",
+              JSON.stringify({
+                ...res,
+                choices: []
+              })
+            );
+          }
+          const response = {
+            id: genId(),
+            text: (_b = (_a = res == null ? void 0 : res.choices[0]) == null ? void 0 : _a.message) == null ? void 0 : _b.content,
+            created: res.created,
+            role: "assistant" /* assistant */,
+            parentMessageId: userMessage.id,
+            tokens: (_c = res == null ? void 0 : res.usage) == null ? void 0 : _c.completion_tokens
+          };
+          const msgsToBeStored = [userMessage, response];
+          if (systemPrompt) {
+            const systemMessage = {
+              id: genId(),
+              text: systemPrompt,
+              role: "system" /* system */,
+              tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
+            };
+            userMessage.parentMessageId = systemMessage.id;
+            msgsToBeStored.unshift(systemMessage);
+          }
+          await __privateGet(this, _store2).set(msgsToBeStored);
+          resolve(response);
+        } catch (e) {
+          reject(e);
+        }
       }
     });
   }
