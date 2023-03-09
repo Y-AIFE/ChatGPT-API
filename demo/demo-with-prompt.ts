@@ -19,7 +19,10 @@ void (async function () {
   const readline = getReadLine()
   console.log('---------------------your question------------------')
   while ((line = await readline())) {
-    prevRes = await basicRunner(line, prevRes?.id)
+    prevRes = await basicRunner(
+      line,
+      prevRes ? (prevRes.data as any).id : undefined,
+    )
     console.log('---------------------ChatGPT says------------------------')
     console.log(prevRes && prevRes.data)
     console.log('---------------------your question------------------')
