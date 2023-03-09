@@ -43,6 +43,19 @@ export interface IChatCompletion {
   }[]
 }
 
+export interface IChatCompletionErrReponseData {
+  message?: string
+  type?: string
+}
+
+export interface IChatCompletionStreamOnEndData {
+  success: boolean
+  data: IChatGPTResponse | IChatCompletionErrReponseData
+  status: number
+}
+
+export type TChatCompletionStreamOnEnd = (endData: IChatCompletionStreamOnEndData) => void
+
 /**
  * response message
  */
@@ -142,7 +155,7 @@ export interface IChatGPTParams {
    */
   limitTokensInAMessage?: number
   /**
-   * same reason as `limitTokensInAMessage`, **Maybe the message returned by ChatGPT should not be sent to the ChatGPT server as a prompt for the next conversation**, default value is `false` 
+   * same reason as `limitTokensInAMessage`, **Maybe the message returned by ChatGPT should not be sent to the ChatGPT server as a prompt for the next conversation**, default value is `false`
    * - `true`: will ignore ChatGPT server message in the next sendMessage, and will only refer to `limitTokensInAMessage` in history messages
    * - `false`: will only refer to `limitTokensInAMessage` in history messages
    */

@@ -16,12 +16,15 @@ const api = new ChatGPT({
 async function run() {
   try {
     const res = await api.sendMessage({
-      text: '不吃早饭对身体有没有坏处',
+      text: '你好呀',
       onProgress(t) {
         console.log('[onProgress]', t)
       },
+      onEnd(d) {
+        console.log('[end]', d)
+      }
     })
-    console.log(res)
+    console.log('res', res)
   } catch (e) {
     console.log('err', JSON.stringify(e))    
   }
