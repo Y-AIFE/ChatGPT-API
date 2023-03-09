@@ -216,15 +216,22 @@ encode_fn = function(text) {
 import axios from "axios";
 async function post(config, opts) {
   const ins = axios.create({
-    method: "POST"
+    method: "POST",
+    validateStatus(status) {
+      return true;
+    }
   });
   if (opts.debug) {
     ins.interceptors.request.use((config2) => {
-      log("axios config", config2);
+      log("axios config", {
+        headers: config2.headers,
+        data: config2.data
+      });
       return config2;
     });
   }
-  return (await ins({ ...config })).data;
+  const response = await ins({ ...config });
+  return response;
 }
 
 // src/utils/urls.ts
@@ -239,9 +246,12 @@ var urls = {
 var urls_default = urls;
 
 // src/ChatGPT.ts
-var _apiKey, _model, _urls, _debug2, _requestConfig, _store2, _tokenizer2, _maxTokens, _limitTokensInAMessage, _ignoreServerMessagesInPrompt, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
+var _apiKey, _model, _urls, _debug2, _requestConfig, _store2, _tokenizer2, _maxTokens, _limitTokensInAMessage, _ignoreServerMessagesInPrompt, _streamChat, streamChat_fn, _chat, chat_fn, _validateAxiosResponse, validateAxiosResponse_fn, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
 var ChatGPT = class {
   constructor(opts) {
+    __privateAdd(this, _streamChat);
+    __privateAdd(this, _chat);
+    __privateAdd(this, _validateAxiosResponse);
     /**
      * make conversations for http request data.messages
      */
@@ -299,14 +309,15 @@ var ChatGPT = class {
         text,
         systemPrompt = void 0,
         parentMessageId = void 0,
-        onProgress = false
+        onProgress = false,
+        onEnd = () => {
+        }
       } = opts;
       if (systemPrompt) {
         if (parentMessageId)
           await __privateGet(this, _store2).clear1Conversation(parentMessageId);
         parentMessageId = void 0;
       }
-      const model = __privateGet(this, _model);
       const userMessage = {
         id: genId(),
         text,
@@ -319,101 +330,16 @@ var ChatGPT = class {
         log("messages", messages);
       }
       if (onProgress) {
-        try {
-          const stream = await post(
-            {
-              url: __privateGet(this, _urls).createChatCompletion,
-              ...__privateGet(this, _requestConfig),
-              headers: {
-                Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
-                "Content-Type": "application/json",
-                ...{ ...__privateGet(this, _requestConfig).headers || {} }
-              },
-              data: {
-                stream: true,
-                model,
-                messages,
-                ...{ ...__privateGet(this, _requestConfig).data || {} }
-              },
-              responseType: "stream"
-            },
-            {
-              debug: __privateGet(this, _debug2)
-            }
-          );
-          const response = {
-            id: genId(),
-            text: "",
-            created: Math.floor(Date.now() / 1e3),
-            role: "assistant" /* assistant */,
-            parentMessageId: userMessage.id,
-            tokens: 0
-          };
-          stream.on("data", (buf) => {
-            try {
-              const dataArr = buf.toString().split("\n");
-              let onDataPieceText = "";
-              for (const dataStr of dataArr) {
-                if (dataStr.indexOf("data: ") !== 0 || dataStr === "data: [DONE]")
-                  continue;
-                const parsedData = JSON.parse(dataStr.slice(6));
-                const pieceText = parsedData.choices[0].delta.content || "";
-                onDataPieceText += pieceText;
-              }
-              if (typeof onProgress === "function") {
-                onProgress(onDataPieceText);
-              }
-              response.text += onDataPieceText;
-            } catch (e) {
-              log("[chatgpt api err]", e);
-            }
-          });
-          stream.on("end", () => {
-            response.tokens = __privateGet(this, _tokenizer2).getTokenCnt(response.text);
-            resolve(response);
-          });
-        } catch (e) {
-          reject(e);
-        }
-      } else {
-        try {
-          const res = await post(
-            {
-              url: __privateGet(this, _urls).createChatCompletion,
-              ...__privateGet(this, _requestConfig),
-              headers: {
-                Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
-                "Content-Type": "application/json",
-                ...{ ...__privateGet(this, _requestConfig).headers || {} }
-              },
-              data: {
-                model,
-                messages,
-                ...{ ...__privateGet(this, _requestConfig).data || {} }
-              }
-            },
-            {
-              debug: __privateGet(this, _debug2)
-            }
-          );
-          if (__privateGet(this, _debug2)) {
-            log(
-              "response",
-              JSON.stringify({
-                ...res,
-                choices: []
-              })
-            );
-          }
-          const response = {
-            id: genId(),
-            text: (_b = (_a = res == null ? void 0 : res.choices[0]) == null ? void 0 : _a.message) == null ? void 0 : _b.content,
-            created: res.created,
-            role: "assistant" /* assistant */,
-            parentMessageId: userMessage.id,
-            tokens: (_c = res == null ? void 0 : res.usage) == null ? void 0 : _c.completion_tokens
-          };
-          const msgsToBeStored = [userMessage, response];
+        const responseMessage = {
+          id: genId(),
+          text: "",
+          created: Math.floor(Date.now() / 1e3),
+          role: "assistant" /* assistant */,
+          parentMessageId: userMessage.id,
+          tokens: 0
+        };
+        const innerOnEnd = async () => {
+          const msgsToBeStored = [userMessage, responseMessage];
           if (systemPrompt) {
             const systemMessage = {
               id: genId(),
@@ -425,10 +351,43 @@ var ChatGPT = class {
             msgsToBeStored.unshift(systemMessage);
           }
           await __privateGet(this, _store2).set(msgsToBeStored);
-          resolve(response);
-        } catch (e) {
-          reject(e);
+          resolve(null);
+        };
+        await __privateMethod(this, _streamChat, streamChat_fn).call(this, messages, onProgress, responseMessage, innerOnEnd, onEnd);
+      } else {
+        const chatResponse = await __privateMethod(this, _chat, chat_fn).call(this, messages);
+        if (!chatResponse.success) {
+          return resolve({
+            ...chatResponse,
+            data: chatResponse.data
+          });
         }
+        const res = chatResponse.data;
+        const responseMessage = {
+          id: genId(),
+          text: (_b = (_a = res == null ? void 0 : res.choices[0]) == null ? void 0 : _a.message) == null ? void 0 : _b.content,
+          created: res.created,
+          role: "assistant" /* assistant */,
+          parentMessageId: userMessage.id,
+          tokens: (_c = res == null ? void 0 : res.usage) == null ? void 0 : _c.completion_tokens
+        };
+        const msgsToBeStored = [userMessage, responseMessage];
+        if (systemPrompt) {
+          const systemMessage = {
+            id: genId(),
+            text: systemPrompt,
+            role: "system" /* system */,
+            tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
+          };
+          userMessage.parentMessageId = systemMessage.id;
+          msgsToBeStored.unshift(systemMessage);
+        }
+        await __privateGet(this, _store2).set(msgsToBeStored);
+        resolve({
+          success: true,
+          data: responseMessage,
+          status: chatResponse.status
+        });
       }
     });
   }
@@ -446,6 +405,121 @@ _tokenizer2 = new WeakMap();
 _maxTokens = new WeakMap();
 _limitTokensInAMessage = new WeakMap();
 _ignoreServerMessagesInPrompt = new WeakMap();
+_streamChat = new WeakSet();
+streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEnd, onEnd) {
+  const axiosResponse = await post(
+    {
+      url: __privateGet(this, _urls).createChatCompletion,
+      ...__privateGet(this, _requestConfig),
+      headers: {
+        Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
+        "Content-Type": "application/json",
+        ...{ ...__privateGet(this, _requestConfig).headers || {} }
+      },
+      data: {
+        stream: true,
+        model: __privateGet(this, _model),
+        messages,
+        ...{ ...__privateGet(this, _requestConfig).data || {} }
+      },
+      responseType: "stream"
+    },
+    {
+      debug: __privateGet(this, _debug2)
+    }
+  );
+  const stream = axiosResponse.data;
+  const status = axiosResponse.status;
+  if (__privateMethod(this, _validateAxiosResponse, validateAxiosResponse_fn).call(this, status)) {
+    stream.on("data", (buf) => {
+      const dataArr = buf.toString().split("\n");
+      let onDataPieceText = "";
+      for (const dataStr of dataArr) {
+        if (dataStr.indexOf("data: ") !== 0 || dataStr === "data: [DONE]")
+          continue;
+        const parsedData = JSON.parse(dataStr.slice(6));
+        const pieceText = parsedData.choices[0].delta.content || "";
+        onDataPieceText += pieceText;
+      }
+      if (typeof onProgress === "function") {
+        onProgress(onDataPieceText);
+      }
+      responseMessagge.text += onDataPieceText;
+    });
+    stream.on("end", async () => {
+      responseMessagge.tokens = __privateGet(this, _tokenizer2).getTokenCnt(
+        responseMessagge.text
+      );
+      await innerOnEnd();
+      onEnd && onEnd({
+        success: true,
+        data: responseMessagge,
+        status: axiosResponse.status
+      });
+    });
+  } else {
+    let data = stream.on("data", (buf) => {
+      data = JSON.parse(buf.toString());
+    });
+    stream.on("end", () => {
+      var _a, _b;
+      onEnd && onEnd({
+        success: false,
+        data: {
+          message: (_a = data == null ? void 0 : data.error) == null ? void 0 : _a.message,
+          type: (_b = data == null ? void 0 : data.error) == null ? void 0 : _b.type
+        },
+        status
+      });
+    });
+  }
+};
+_chat = new WeakSet();
+chat_fn = async function(messages) {
+  var _a, _b;
+  const axiosResponse = await post(
+    {
+      url: __privateGet(this, _urls).createChatCompletion,
+      ...__privateGet(this, _requestConfig),
+      headers: {
+        Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
+        "Content-Type": "application/json",
+        ...{ ...__privateGet(this, _requestConfig).headers || {} }
+      },
+      data: {
+        model: __privateGet(this, _model),
+        messages,
+        ...{ ...__privateGet(this, _requestConfig).data || {} }
+      }
+    },
+    {
+      debug: __privateGet(this, _debug2)
+    }
+  );
+  log("[#chat]", axiosResponse.status);
+  const data = axiosResponse.data;
+  const status = axiosResponse.status;
+  if (__privateMethod(this, _validateAxiosResponse, validateAxiosResponse_fn).call(this, status)) {
+    return {
+      success: true,
+      data,
+      status
+    };
+  } else {
+    return {
+      success: false,
+      data: {
+        message: (_a = data == null ? void 0 : data.error) == null ? void 0 : _a.message,
+        type: (_b = data == null ? void 0 : data.error) == null ? void 0 : _b.type
+      },
+      status
+    };
+  }
+};
+_validateAxiosResponse = new WeakSet();
+validateAxiosResponse_fn = function(status) {
+  return status >= 200 && status < 300;
+};
 _makeConversations = new WeakSet();
 makeConversations_fn = async function(userMessage, prompt) {
   let messages = [];

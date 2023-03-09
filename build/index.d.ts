@@ -23,6 +23,16 @@ interface IChatCompletion {
         index: number;
     }[];
 }
+interface IChatCompletionErrReponseData {
+    message?: string;
+    type?: string;
+}
+interface IChatCompletionStreamOnEndData {
+    success: boolean;
+    data: IChatGPTResponse | IChatCompletionErrReponseData;
+    status: number;
+}
+type TChatCompletionStreamOnEnd = (endData: IChatCompletionStreamOnEndData) => void;
 /**
  * response message
  */
@@ -158,8 +168,9 @@ declare class ChatGPT {
         systemPrompt?: string;
         parentMessageId?: string;
         onProgress?: (t: string) => void;
-    } | string): Promise<IChatGPTResponse>;
+        onEnd?: (d: IChatCompletionStreamOnEndData) => void;
+    } | string): Promise<IChatCompletionStreamOnEndData | null>;
     clear1Conversation(parentMessageId?: string): Promise<void>;
 }
 
-export { ChatGPT, ERole, IChatCompletion, IChatGPTParams, IChatGPTResponse, IChatGPTSystemMessage, IChatGPTUserMessage, IConversationStoreParams, ITokensParams, TChatGPTHTTPDataMessage, TCommonMessage };
+export { ChatGPT, ERole, IChatCompletion, IChatCompletionErrReponseData, IChatCompletionStreamOnEndData, IChatGPTParams, IChatGPTResponse, IChatGPTSystemMessage, IChatGPTUserMessage, IConversationStoreParams, ITokensParams, TChatCompletionStreamOnEnd, TChatGPTHTTPDataMessage, TCommonMessage };
