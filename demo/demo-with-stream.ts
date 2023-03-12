@@ -5,13 +5,19 @@ const api = new ChatGPT({
   apiKey: apiKey, // get api key
   debug: true,
   requestConfig: {
-    proxy: {
-      protocol: 'http',
-      host: '127.0.0.1',
-      port: 7890,
-    },
+    // proxy: {
+    //   protocol: 'http',
+    //   host: '127.0.0.1',
+    //   port: 7890,
+    // },
   },
+  log: logger,
 })
+
+function logger(msg: string, ...args: any[]): void {
+  console.log('++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+  console.log(msg, ...args)
+}
 
 async function run() {
   try {
@@ -22,11 +28,11 @@ async function run() {
       },
       onEnd(d) {
         console.log('[end]', d)
-      }
+      },
     })
     console.log('res', res)
   } catch (e) {
-    console.log('err', JSON.stringify(e))    
+    console.log('err', JSON.stringify(e))
   }
 }
 

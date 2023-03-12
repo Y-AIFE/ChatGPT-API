@@ -1,2 +1,2 @@
-export * from './ChatGPT'
+export * from './Chatgpt'
 export * from './types'

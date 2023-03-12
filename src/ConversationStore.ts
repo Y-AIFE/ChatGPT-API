@@ -1,13 +1,13 @@
 import Keyv from 'keyv'
 import LRUCache from 'lru-cache'
 import Tokenizer from './Tokenizer'
-import { log } from './utils'
 
 import {
   IChatGPTHTTPDataMessage,
   IConversationStoreParams,
   TCommonMessage,
   ERole,
+  TLog,
 } from './types'
 
 /**
@@ -21,8 +21,9 @@ export default class ConversationStore {
    */
   #maxFindDepth: number
   #debug: boolean
+  #log: TLog
   constructor(params: IConversationStoreParams) {
-    const { maxKeys = 100000, maxFindDepth = 20, debug = false } = params
+    const { maxKeys = 100000, maxFindDepth = 20, debug, log } = params
     this.#lru = new LRUCache<string, TCommonMessage>({
       max: maxKeys,
     })
@@ -31,8 +32,9 @@ export default class ConversationStore {
     })
     this.#maxFindDepth = maxFindDepth
     this.#debug = debug
+    this.#log = log
 
-    if (this.#debug) log('ConversationStore params', params)
+    if (this.#debug) this.#log('ConversationStore params', params)
   }
   /**
    * get message by id
@@ -51,7 +53,7 @@ export default class ConversationStore {
     for (const msg of msgs) {
       await this.#store.set(msg.id, msg)
     }
-    if (this.#debug) log('lru size', this.#lru.size)
+    if (this.#debug) this.#log('lru size', this.#lru.size)
   }
   /**
    * check if the id exists in the store
@@ -125,7 +127,7 @@ export default class ConversationStore {
       parentMessageId = msg?.parentMessageId
     }
     if (this.#debug) {
-      log('availableTokens', availableTokens)
+      this.#log('availableTokens', availableTokens)
     }
     return messages
   }

@@ -112,7 +112,8 @@ export enum ERole {
 export interface IConversationStoreParams {
   maxKeys?: number
   maxFindDepth?: number
-  debug?: boolean
+  debug: boolean
+  log: TLog
 }
 
 export interface IChatGPTParams {
@@ -162,6 +163,8 @@ export interface IChatGPTParams {
    * - `false`: will only refer to `limitTokensInAMessage` in history messages
    */
   ignoreServerMessagesInPrompt?: boolean
+
+  log?: TLog 
 }
 
 /**
@@ -187,3 +190,8 @@ export type TCommonMessage =
   | IChatGPTResponse
   | IChatGPTUserMessage
   | IChatGPTSystemMessage
+
+/**
+ * Pass in your own logger
+ */
+export type TLog = (msg: string, ...args: any[]) => void

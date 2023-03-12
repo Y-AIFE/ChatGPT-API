@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { RawAxiosRequestConfig } from 'axios'
-import { log } from './index'
+import { TLog } from '../types'
 
 interface IRequestOpts {
-  debug?: boolean
+  debug: boolean
+  log: TLog
 }
 
 // export async function get(config: RawAxiosRequestConfig, opts: IRequestOpts) {
@@ -19,13 +20,14 @@ interface IRequestOpts {
 //   return (await ins({ ...config })).data
 // }
 export async function post(config: RawAxiosRequestConfig, opts: IRequestOpts) {
+  const { debug, log } = opts
   const ins = axios.create({
     method: 'POST',
     validateStatus(status) {
       return true
     },
   })
-  if (opts.debug) {
+  if (debug) {
     ins.interceptors.request.use((config) => {
       log('axios config', {
         headers: config.headers,
@@ -37,7 +39,6 @@ export async function post(config: RawAxiosRequestConfig, opts: IRequestOpts) {
   const response = await ins({ ...config })
   return response
 }
-
 
 // if (response.status >= 200 && response.status < 300) {
 //   console.log('[response]', response.data)

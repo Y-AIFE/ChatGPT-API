@@ -12,10 +12,11 @@ import {
   IChatGPTParams,
   IChatCompletionStreamOnEndData,
   IChatCompletionErrReponseData,
+  TLog,
 } from './types'
 import { post } from './utils/request'
 import URLS from './utils/urls'
-import { genId, log } from './utils'
+import { genId, log as defaultLog } from './utils'
 
 // https://platform.openai.com/docs/api-reference/chat
 // curl https://api.openai.com/v1/chat/completions \
@@ -46,6 +47,7 @@ export class ChatGPT {
   #maxTokens: number
   #limitTokensInAMessage: number
   #ignoreServerMessagesInPrompt: boolean
+  #log: TLog
   constructor(opts: IChatGPTParams) {
     const {
       apiKey,
@@ -57,20 +59,24 @@ export class ChatGPT {
       maxTokens = 4096,
       limitTokensInAMessage = 1000,
       ignoreServerMessagesInPrompt = false,
+      log = defaultLog,
     } = opts
 
     this.#apiKey = apiKey
     this.#model = model
     this.#debug = debug
     this.#requestConfig = requestConfig
-    this.#store = new ConversationStore({
-      ...storeConfig,
-      debug: this.#debug,
-    })
     this.#tokenizer = new Tokenizer(tokenizerConfig)
     this.#maxTokens = maxTokens
     this.#limitTokensInAMessage = limitTokensInAMessage
     this.#ignoreServerMessagesInPrompt = ignoreServerMessagesInPrompt
+    this.#log = log
+
+    this.#store = new ConversationStore({
+      ...storeConfig,
+      debug: this.#debug,
+      log: this.#log,
+    })
   }
 
   /**
@@ -117,7 +123,7 @@ export class ChatGPT {
           systemPrompt,
         )
         if (this.#debug) {
-          log('messages', messages)
+          this.#log('messages', messages)
         }
         if (onProgress) {
           const responseMessage: IChatGPTResponse = {
@@ -215,6 +221,7 @@ export class ChatGPT {
       },
       {
         debug: this.#debug,
+        log: this.#log,
       },
     )
     const stream = axiosResponse.data
@@ -292,9 +299,10 @@ export class ChatGPT {
       },
       {
         debug: this.#debug,
+        log: this.#log,
       },
     )
-    // log('[#chat]', axiosResponse.status)
+    // this.#logger('[#chat]', axiosResponse.status)
     const data = axiosResponse.data
     const status = axiosResponse.status
     if (this.#validateAxiosResponse(status)) {
@@ -342,7 +350,7 @@ export class ChatGPT {
     /**
      * if there are no default system massage, add one
      */
-    if(!messages.length || messages[0].role !== ERole.system) {
+    if (!messages.length || messages[0].role !== ERole.system) {
       messages.unshift(genDefaultSystemMessage())
     }
     messages.push({
