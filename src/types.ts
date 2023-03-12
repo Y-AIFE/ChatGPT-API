@@ -54,7 +54,9 @@ export interface IChatCompletionStreamOnEndData {
   status: number
 }
 
-export type TChatCompletionStreamOnEnd = (endData: IChatCompletionStreamOnEndData) => void
+export type TChatCompletionStreamOnEnd = (
+  endData: IChatCompletionStreamOnEndData,
+) => void
 
 /**
  * response message
@@ -87,7 +89,7 @@ export interface IChatGPTSystemMessage {
   parentMessageId?: string
   tokens?: number
 }
-export type TChatGPTHTTPDataMessage = {
+export interface IChatGPTHTTPDataMessage {
   role: ERole
   content: string
 }

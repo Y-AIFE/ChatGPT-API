@@ -8,10 +8,10 @@ import {
   IChatGPTUserMessage,
   IChatGPTSystemMessage,
   ERole,
-  TChatGPTHTTPDataMessage,
+  IChatGPTHTTPDataMessage,
   IChatGPTParams,
   IChatCompletionStreamOnEndData,
-  IChatCompletionErrReponseData
+  IChatCompletionErrReponseData,
 } from './types'
 import { post } from './utils/request'
 import URLS from './utils/urls'
@@ -25,6 +25,14 @@ import { genId, log } from './utils'
 //   "model": "gpt-3.5-turbo",
 //   "messages": [{"role": "user", "content": "Hello!"}]
 // }'
+
+function genDefaultSystemMessage(): IChatGPTHTTPDataMessage {
+  const currentDate = new Date().toISOString().split('T')[0]
+  return {
+    role: ERole.system,
+    content: `You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.\nKnowledge cutoff: 2021-09-01\nCurrent date: ${currentDate}`,
+  }
+}
 
 // role https://platform.openai.com/docs/guides/chat/introduction
 export class ChatGPT {
@@ -82,41 +90,83 @@ export class ChatGPT {
         }
       | string,
   ) {
-    return new Promise<IChatCompletionStreamOnEndData | null>(async (resolve, reject) => {
-      opts = typeof opts === 'string' ? { text: opts } : opts
-      let {
-        text,
-        systemPrompt = undefined,
-        parentMessageId = undefined,
-        onProgress = false,
-        onEnd = () => {},
-      } = opts
-      if (systemPrompt) {
-        if (parentMessageId)
-          await this.#store.clear1Conversation(parentMessageId)
-        parentMessageId = undefined
-      }
-      const userMessage: IChatGPTUserMessage = {
-        id: genId(),
-        text,
-        role: ERole.user,
-        parentMessageId,
-        tokens: this.#tokenizer.getTokenCnt(text),
-      }
-      const messages = await this.#makeConversations(userMessage, systemPrompt)
-      if (this.#debug) {
-        log('messages', messages)
-      }
-      if (onProgress) {
-        const responseMessage: IChatGPTResponse = {
-          id: genId(),
-          text: '',
-          created: Math.floor(Date.now() / 1000),
-          role: ERole.assistant,
-          parentMessageId: userMessage.id,
-          tokens: 0,
+    return new Promise<IChatCompletionStreamOnEndData | null>(
+      async (resolve, reject) => {
+        opts = typeof opts === 'string' ? { text: opts } : opts
+        let {
+          text,
+          systemPrompt = undefined,
+          parentMessageId = undefined,
+          onProgress = false,
+          onEnd = () => {},
+        } = opts
+        if (systemPrompt) {
+          if (parentMessageId)
+            await this.#store.clear1Conversation(parentMessageId)
+          parentMessageId = undefined
         }
-        const innerOnEnd = async () => {
+        const userMessage: IChatGPTUserMessage = {
+          id: genId(),
+          text,
+          role: ERole.user,
+          parentMessageId,
+          tokens: this.#tokenizer.getTokenCnt(text),
+        }
+        const messages = await this.#makeConversations(
+          userMessage,
+          systemPrompt,
+        )
+        if (this.#debug) {
+          log('messages', messages)
+        }
+        if (onProgress) {
+          const responseMessage: IChatGPTResponse = {
+            id: genId(),
+            text: '',
+            created: Math.floor(Date.now() / 1000),
+            role: ERole.assistant,
+            parentMessageId: userMessage.id,
+            tokens: 0,
+          }
+          const innerOnEnd = async () => {
+            const msgsToBeStored = [userMessage, responseMessage]
+            if (systemPrompt) {
+              const systemMessage: IChatGPTSystemMessage = {
+                id: genId(),
+                text: systemPrompt,
+                role: ERole.system,
+                tokens: this.#tokenizer.getTokenCnt(systemPrompt),
+              }
+              userMessage.parentMessageId = systemMessage.id
+              msgsToBeStored.unshift(systemMessage)
+            }
+            await this.#store.set(msgsToBeStored)
+            resolve(null)
+          }
+          await this.#streamChat(
+            messages,
+            onProgress,
+            responseMessage,
+            innerOnEnd,
+            onEnd,
+          )
+        } else {
+          const chatResponse = await this.#chat(messages)
+          if (!chatResponse.success) {
+            return resolve({
+              ...chatResponse,
+              data: chatResponse.data as IChatCompletionErrReponseData,
+            })
+          }
+          const res = chatResponse.data as IChatCompletion
+          const responseMessage: IChatGPTResponse = {
+            id: genId(),
+            text: res?.choices[0]?.message?.content,
+            created: res.created,
+            role: ERole.assistant,
+            parentMessageId: userMessage.id,
+            tokens: res?.usage?.completion_tokens,
+          }
           const msgsToBeStored = [userMessage, responseMessage]
           if (systemPrompt) {
             const systemMessage: IChatGPTSystemMessage = {
@@ -129,45 +179,14 @@ export class ChatGPT {
             msgsToBeStored.unshift(systemMessage)
           }
           await this.#store.set(msgsToBeStored)
-          resolve(null)
-        }
-        await this.#streamChat(messages, onProgress, responseMessage, innerOnEnd, onEnd)
-      } else {
-        const chatResponse = await this.#chat(messages)
-        if (!chatResponse.success) {
-          return resolve({
-            ...chatResponse,
-            data: chatResponse.data as IChatCompletionErrReponseData
+          resolve({
+            success: true,
+            data: responseMessage,
+            status: chatResponse.status,
           })
         }
-        const res = chatResponse.data as IChatCompletion
-        const responseMessage: IChatGPTResponse = {
-          id: genId(),
-          text: res?.choices[0]?.message?.content,
-          created: res.created,
-          role: ERole.assistant,
-          parentMessageId: userMessage.id,
-          tokens: res?.usage?.completion_tokens,
-        }
-        const msgsToBeStored = [userMessage, responseMessage]
-        if (systemPrompt) {
-          const systemMessage: IChatGPTSystemMessage = {
-            id: genId(),
-            text: systemPrompt,
-            role: ERole.system,
-            tokens: this.#tokenizer.getTokenCnt(systemPrompt),
-          }
-          userMessage.parentMessageId = systemMessage.id
-          msgsToBeStored.unshift(systemMessage)
-        }
-        await this.#store.set(msgsToBeStored)
-        resolve({
-          success: true,
-          data: responseMessage,
-          status: chatResponse.status
-        })
-      }
-    })
+      },
+    )
   }
 
   async #streamChat(
@@ -275,7 +294,7 @@ export class ChatGPT {
         debug: this.#debug,
       },
     )
-    log('[#chat]', axiosResponse.status)
+    // log('[#chat]', axiosResponse.status)
     const data = axiosResponse.data
     const status = axiosResponse.status
     if (this.#validateAxiosResponse(status)) {
@@ -304,7 +323,7 @@ export class ChatGPT {
    * make conversations for http request data.messages
    */
   async #makeConversations(userMessage: IChatGPTUserMessage, prompt?: string) {
-    let messages: TChatGPTHTTPDataMessage[] = []
+    let messages: IChatGPTHTTPDataMessage[] = []
     let usedTokens = this.#tokenizer.getTokenCnt(userMessage.text)
     if (prompt) {
       messages.push({
@@ -319,6 +338,12 @@ export class ChatGPT {
         availableTokens: this.#maxTokens - usedTokens,
         ignore: this.#ignoreServerMessagesInPrompt,
       })
+    }
+    /**
+     * if there are no default system massage, add one
+     */
+    if(!messages.length || messages[0].role !== ERole.system) {
+      messages.unshift(genDefaultSystemMessage())
     }
     messages.push({
       role: ERole.user,

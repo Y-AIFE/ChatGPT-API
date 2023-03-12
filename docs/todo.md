@@ -1,0 +1,2 @@
+- 添加默认 system prompt
+- 允许传入 logger

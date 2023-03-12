@@ -4,7 +4,7 @@ import Tokenizer from './Tokenizer'
 import { log } from './utils'
 
 import {
-  TChatGPTHTTPDataMessage,
+  IChatGPTHTTPDataMessage,
   IConversationStoreParams,
   TCommonMessage,
   ERole,
@@ -105,7 +105,7 @@ export default class ConversationStore {
     } = opts
     let parentMessageId: string | undefined = id
     let cnt = 0
-    const messages: TChatGPTHTTPDataMessage[] = []
+    const messages: IChatGPTHTTPDataMessage[] = []
     while (parentMessageId && cnt < this.#maxFindDepth) {
       const msg: TCommonMessage | undefined = await this.#store.get(
         parentMessageId,
