@@ -64,10 +64,10 @@ interface IChatGPTSystemMessage {
     parentMessageId?: string;
     tokens?: number;
 }
-type TChatGPTHTTPDataMessage = {
+interface IChatGPTHTTPDataMessage {
     role: ERole;
     content: string;
-};
+}
 declare enum ERole {
     /**
      * conversation situation
@@ -85,7 +85,8 @@ declare enum ERole {
 interface IConversationStoreParams {
     maxKeys?: number;
     maxFindDepth?: number;
-    debug?: boolean;
+    debug: boolean;
+    log: TLog;
 }
 interface IChatGPTParams {
     /**
@@ -134,6 +135,7 @@ interface IChatGPTParams {
      * - `false`: will only refer to `limitTokensInAMessage` in history messages
      */
     ignoreServerMessagesInPrompt?: boolean;
+    log?: TLog;
 }
 /**
  * Tokenizer params
@@ -153,6 +155,10 @@ interface ITokensParams {
     replaceCallback?: (...args: any[]) => string;
 }
 type TCommonMessage = IChatGPTResponse | IChatGPTUserMessage | IChatGPTSystemMessage;
+/**
+ * Pass in your own logger
+ */
+type TLog = (msg: string, ...args: any[]) => void;
 
 declare class ChatGPT {
     #private;
@@ -173,4 +179,4 @@ declare class ChatGPT {
     clear1Conversation(parentMessageId?: string): Promise<void>;
 }
 
-export { ChatGPT, ERole, IChatCompletion, IChatCompletionErrReponseData, IChatCompletionStreamOnEndData, IChatGPTParams, IChatGPTResponse, IChatGPTSystemMessage, IChatGPTUserMessage, IConversationStoreParams, ITokensParams, TChatCompletionStreamOnEnd, TChatGPTHTTPDataMessage, TCommonMessage };
+export { ChatGPT, ERole, IChatCompletion, IChatCompletionErrReponseData, IChatCompletionStreamOnEndData, IChatGPTHTTPDataMessage, IChatGPTParams, IChatGPTResponse, IChatGPTSystemMessage, IChatGPTUserMessage, IConversationStoreParams, ITokensParams, TChatCompletionStreamOnEnd, TCommonMessage, TLog };

@@ -25,20 +25,6 @@ var __privateMethod = (obj, member, method) => {
 import Keyv from "keyv";
 import LRUCache from "lru-cache";
 
-// src/utils/index.ts
-import { v4 as uuid } from "uuid";
-
-// src/utils/log.ts
-function log(...args) {
-  console.log("----------------------------------");
-  console.log(...args);
-}
-
-// src/utils/index.ts
-function genId() {
-  return uuid();
-}
-
 // src/types.ts
 var ERole = /* @__PURE__ */ ((ERole2) => {
   ERole2["system"] = "system";
@@ -48,7 +34,7 @@ var ERole = /* @__PURE__ */ ((ERole2) => {
 })(ERole || {});
 
 // src/ConversationStore.ts
-var _store, _lru, _maxFindDepth, _debug;
+var _store, _lru, _maxFindDepth, _debug, _log;
 var ConversationStore = class {
   constructor(params) {
     __privateAdd(this, _store, void 0);
@@ -58,7 +44,8 @@ var ConversationStore = class {
      */
     __privateAdd(this, _maxFindDepth, void 0);
     __privateAdd(this, _debug, void 0);
-    const { maxKeys = 1e5, maxFindDepth = 20, debug = false } = params;
+    __privateAdd(this, _log, void 0);
+    const { maxKeys = 1e5, maxFindDepth = 20, debug, log: log2 } = params;
     __privateSet(this, _lru, new LRUCache({
       max: maxKeys
     }));
@@ -67,8 +54,9 @@ var ConversationStore = class {
     }));
     __privateSet(this, _maxFindDepth, maxFindDepth);
     __privateSet(this, _debug, debug);
+    __privateSet(this, _log, log2);
     if (__privateGet(this, _debug))
-      log("ConversationStore params", params);
+      __privateGet(this, _log).call(this, "ConversationStore params", params);
   }
   /**
    * get message by id
@@ -88,7 +76,7 @@ var ConversationStore = class {
       await __privateGet(this, _store).set(msg.id, msg);
     }
     if (__privateGet(this, _debug))
-      log("lru size", __privateGet(this, _lru).size);
+      __privateGet(this, _log).call(this, "lru size", __privateGet(this, _lru).size);
   }
   /**
    * check if the id exists in the store
@@ -157,7 +145,7 @@ var ConversationStore = class {
       parentMessageId = msg == null ? void 0 : msg.parentMessageId;
     }
     if (__privateGet(this, _debug)) {
-      log("availableTokens", availableTokens);
+      __privateGet(this, _log).call(this, "availableTokens", availableTokens);
     }
     return messages;
   }
@@ -172,6 +160,7 @@ _store = new WeakMap();
 _lru = new WeakMap();
 _maxFindDepth = new WeakMap();
 _debug = new WeakMap();
+_log = new WeakMap();
 
 // src/Tokenizer.ts
 import { get_encoding } from "@dqbd/tiktoken";
@@ -215,15 +204,16 @@ encode_fn = function(text) {
 // src/utils/request.ts
 import axios from "axios";
 async function post(config, opts) {
+  const { debug, log: log2 } = opts;
   const ins = axios.create({
     method: "POST",
     validateStatus(status) {
       return true;
     }
   });
-  if (opts.debug) {
+  if (debug) {
     ins.interceptors.request.use((config2) => {
-      log("axios config", {
+      log2("axios config", {
         headers: config2.headers,
         data: config2.data
       });
@@ -245,8 +235,31 @@ var urls = {
 };
 var urls_default = urls;
 
-// src/ChatGPT.ts
-var _apiKey, _model, _urls, _debug2, _requestConfig, _store2, _tokenizer2, _maxTokens, _limitTokensInAMessage, _ignoreServerMessagesInPrompt, _streamChat, streamChat_fn, _chat, chat_fn, _validateAxiosResponse, validateAxiosResponse_fn, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
+// src/utils/index.ts
+import { v4 as uuid } from "uuid";
+
+// src/utils/log.ts
+function log(...args) {
+  console.log("----------------------------------");
+  console.log(...args);
+}
+
+// src/utils/index.ts
+function genId() {
+  return uuid();
+}
+
+// src/Chatgpt.ts
+function genDefaultSystemMessage() {
+  const currentDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  return {
+    role: "system" /* system */,
+    content: `You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.
+Knowledge cutoff: 2021-09-01
+Current date: ${currentDate}`
+  };
+}
+var _apiKey, _model, _urls, _debug2, _requestConfig, _store2, _tokenizer2, _maxTokens, _limitTokensInAMessage, _ignoreServerMessagesInPrompt, _log2, _streamChat, streamChat_fn, _chat, chat_fn, _validateAxiosResponse, validateAxiosResponse_fn, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
 var ChatGPT = class {
   constructor(opts) {
     __privateAdd(this, _streamChat);
@@ -271,6 +284,7 @@ var ChatGPT = class {
     __privateAdd(this, _maxTokens, void 0);
     __privateAdd(this, _limitTokensInAMessage, void 0);
     __privateAdd(this, _ignoreServerMessagesInPrompt, void 0);
+    __privateAdd(this, _log2, void 0);
     const {
       apiKey,
       model = "gpt-3.5-turbo",
@@ -280,20 +294,23 @@ var ChatGPT = class {
       tokenizerConfig = {},
       maxTokens = 4096,
       limitTokensInAMessage = 1e3,
-      ignoreServerMessagesInPrompt = false
+      ignoreServerMessagesInPrompt = false,
+      log: log2 = log
     } = opts;
     __privateSet(this, _apiKey, apiKey);
     __privateSet(this, _model, model);
     __privateSet(this, _debug2, debug);
     __privateSet(this, _requestConfig, requestConfig);
-    __privateSet(this, _store2, new ConversationStore({
-      ...storeConfig,
-      debug: __privateGet(this, _debug2)
-    }));
     __privateSet(this, _tokenizer2, new Tokenizer(tokenizerConfig));
     __privateSet(this, _maxTokens, maxTokens);
     __privateSet(this, _limitTokensInAMessage, limitTokensInAMessage);
     __privateSet(this, _ignoreServerMessagesInPrompt, ignoreServerMessagesInPrompt);
+    __privateSet(this, _log2, log2);
+    __privateSet(this, _store2, new ConversationStore({
+      ...storeConfig,
+      debug: __privateGet(this, _debug2),
+      log: __privateGet(this, _log2)
+    }));
   }
   /**
    * send message to ChatGPT server
@@ -302,43 +319,76 @@ var ChatGPT = class {
    * @param opts.parentMessageId
    */
   sendMessage(opts) {
-    return new Promise(async (resolve, reject) => {
-      var _a, _b, _c;
-      opts = typeof opts === "string" ? { text: opts } : opts;
-      let {
-        text,
-        systemPrompt = void 0,
-        parentMessageId = void 0,
-        onProgress = false,
-        onEnd = () => {
+    return new Promise(
+      async (resolve, reject) => {
+        var _a, _b, _c;
+        opts = typeof opts === "string" ? { text: opts } : opts;
+        let {
+          text,
+          systemPrompt = void 0,
+          parentMessageId = void 0,
+          onProgress = false,
+          onEnd = () => {
+          }
+        } = opts;
+        if (systemPrompt) {
+          if (parentMessageId)
+            await __privateGet(this, _store2).clear1Conversation(parentMessageId);
+          parentMessageId = void 0;
         }
-      } = opts;
-      if (systemPrompt) {
-        if (parentMessageId)
-          await __privateGet(this, _store2).clear1Conversation(parentMessageId);
-        parentMessageId = void 0;
-      }
-      const userMessage = {
-        id: genId(),
-        text,
-        role: "user" /* user */,
-        parentMessageId,
-        tokens: __privateGet(this, _tokenizer2).getTokenCnt(text)
-      };
-      const messages = await __privateMethod(this, _makeConversations, makeConversations_fn).call(this, userMessage, systemPrompt);
-      if (__privateGet(this, _debug2)) {
-        log("messages", messages);
-      }
-      if (onProgress) {
-        const responseMessage = {
+        const userMessage = {
           id: genId(),
-          text: "",
-          created: Math.floor(Date.now() / 1e3),
-          role: "assistant" /* assistant */,
-          parentMessageId: userMessage.id,
-          tokens: 0
+          text,
+          role: "user" /* user */,
+          parentMessageId,
+          tokens: __privateGet(this, _tokenizer2).getTokenCnt(text)
         };
-        const innerOnEnd = async () => {
+        const messages = await __privateMethod(this, _makeConversations, makeConversations_fn).call(this, userMessage, systemPrompt);
+        if (__privateGet(this, _debug2)) {
+          __privateGet(this, _log2).call(this, "messages", messages);
+        }
+        if (onProgress) {
+          const responseMessage = {
+            id: genId(),
+            text: "",
+            created: Math.floor(Date.now() / 1e3),
+            role: "assistant" /* assistant */,
+            parentMessageId: userMessage.id,
+            tokens: 0
+          };
+          const innerOnEnd = async () => {
+            const msgsToBeStored = [userMessage, responseMessage];
+            if (systemPrompt) {
+              const systemMessage = {
+                id: genId(),
+                text: systemPrompt,
+                role: "system" /* system */,
+                tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
+              };
+              userMessage.parentMessageId = systemMessage.id;
+              msgsToBeStored.unshift(systemMessage);
+            }
+            await __privateGet(this, _store2).set(msgsToBeStored);
+            resolve(null);
+          };
+          await __privateMethod(this, _streamChat, streamChat_fn).call(this, messages, onProgress, responseMessage, innerOnEnd, onEnd);
+        } else {
+          const chatResponse = await __privateMethod(this, _chat, chat_fn).call(this, messages);
+          if (!chatResponse.success) {
+            return resolve({
+              ...chatResponse,
+              data: chatResponse.data
+            });
+          }
+          const res = chatResponse.data;
+          const responseMessage = {
+            id: genId(),
+            text: (_b = (_a = res == null ? void 0 : res.choices[0]) == null ? void 0 : _a.message) == null ? void 0 : _b.content,
+            created: res.created,
+            role: "assistant" /* assistant */,
+            parentMessageId: userMessage.id,
+            tokens: (_c = res == null ? void 0 : res.usage) == null ? void 0 : _c.completion_tokens
+          };
           const msgsToBeStored = [userMessage, responseMessage];
           if (systemPrompt) {
             const systemMessage = {
@@ -351,45 +401,14 @@ var ChatGPT = class {
             msgsToBeStored.unshift(systemMessage);
           }
           await __privateGet(this, _store2).set(msgsToBeStored);
-          resolve(null);
-        };
-        await __privateMethod(this, _streamChat, streamChat_fn).call(this, messages, onProgress, responseMessage, innerOnEnd, onEnd);
-      } else {
-        const chatResponse = await __privateMethod(this, _chat, chat_fn).call(this, messages);
-        if (!chatResponse.success) {
-          return resolve({
-            ...chatResponse,
-            data: chatResponse.data
+          resolve({
+            success: true,
+            data: responseMessage,
+            status: chatResponse.status
           });
         }
-        const res = chatResponse.data;
-        const responseMessage = {
-          id: genId(),
-          text: (_b = (_a = res == null ? void 0 : res.choices[0]) == null ? void 0 : _a.message) == null ? void 0 : _b.content,
-          created: res.created,
-          role: "assistant" /* assistant */,
-          parentMessageId: userMessage.id,
-          tokens: (_c = res == null ? void 0 : res.usage) == null ? void 0 : _c.completion_tokens
-        };
-        const msgsToBeStored = [userMessage, responseMessage];
-        if (systemPrompt) {
-          const systemMessage = {
-            id: genId(),
-            text: systemPrompt,
-            role: "system" /* system */,
-            tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
-          };
-          userMessage.parentMessageId = systemMessage.id;
-          msgsToBeStored.unshift(systemMessage);
-        }
-        await __privateGet(this, _store2).set(msgsToBeStored);
-        resolve({
-          success: true,
-          data: responseMessage,
-          status: chatResponse.status
-        });
       }
-    });
+    );
   }
   async clear1Conversation(parentMessageId) {
     return await __privateGet(this, _store2).clear1Conversation(parentMessageId);
@@ -405,6 +424,7 @@ _tokenizer2 = new WeakMap();
 _maxTokens = new WeakMap();
 _limitTokensInAMessage = new WeakMap();
 _ignoreServerMessagesInPrompt = new WeakMap();
+_log2 = new WeakMap();
 _streamChat = new WeakSet();
 streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEnd, onEnd) {
   const axiosResponse = await post(
@@ -425,7 +445,8 @@ streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEn
       responseType: "stream"
     },
     {
-      debug: __privateGet(this, _debug2)
+      debug: __privateGet(this, _debug2),
+      log: __privateGet(this, _log2)
     }
   );
   const stream = axiosResponse.data;
@@ -493,10 +514,10 @@ chat_fn = async function(messages) {
       }
     },
     {
-      debug: __privateGet(this, _debug2)
+      debug: __privateGet(this, _debug2),
+      log: __privateGet(this, _log2)
     }
   );
-  log("[#chat]", axiosResponse.status);
   const data = axiosResponse.data;
   const status = axiosResponse.status;
   if (__privateMethod(this, _validateAxiosResponse, validateAxiosResponse_fn).call(this, status)) {
@@ -537,6 +558,9 @@ makeConversations_fn = async function(userMessage, prompt) {
       availableTokens: __privateGet(this, _maxTokens) - usedTokens,
       ignore: __privateGet(this, _ignoreServerMessagesInPrompt)
     });
+  }
+  if (!messages.length || messages[0].role !== "system" /* system */) {
+    messages.unshift(genDefaultSystemMessage());
   }
   messages.push({
     role: "user" /* user */,
