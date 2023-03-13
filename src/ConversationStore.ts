@@ -105,6 +105,9 @@ export default class ConversationStore {
       availableTokens,
       ignore = false,
     } = opts
+    if (this.#debug) {
+      this.#log('[ConversationStore findMessages start]', id)
+    }
     let parentMessageId: string | undefined = id
     let cnt = 0
     const messages: IChatGPTHTTPDataMessage[] = []
@@ -128,6 +131,10 @@ export default class ConversationStore {
     }
     if (this.#debug) {
       this.#log('availableTokens', availableTokens)
+      this.#log('[ConversationStore findMessages end]', messages)
+      if(id) {
+        this.#log('[parentMessage]', await this.#store.get(id))
+      }
     }
     return messages
   }

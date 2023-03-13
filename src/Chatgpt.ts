@@ -123,7 +123,7 @@ export class ChatGPT {
           systemPrompt,
         )
         if (this.#debug) {
-          this.#log('messages', messages)
+          this.#log('history messages', messages)
         }
         if (onProgress) {
           const responseMessage: IChatGPTResponse = {
