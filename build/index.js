@@ -158,6 +158,9 @@ var ConversationStore = class {
       availableTokens,
       ignore = false
     } = opts;
+    if (__privateGet(this, _debug)) {
+      __privateGet(this, _log).call(this, "[ConversationStore findMessages start]", id);
+    }
     let parentMessageId = id;
     let cnt = 0;
     const messages = [];
@@ -182,6 +185,10 @@ var ConversationStore = class {
     }
     if (__privateGet(this, _debug)) {
       __privateGet(this, _log).call(this, "availableTokens", availableTokens);
+      __privateGet(this, _log).call(this, "[ConversationStore findMessages end]", messages);
+      if (id) {
+        __privateGet(this, _log).call(this, "[parentMessage]", await __privateGet(this, _store).get(id));
+      }
     }
     return messages;
   }
@@ -381,7 +388,7 @@ var ChatGPT = class {
         };
         const messages = await __privateMethod(this, _makeConversations, makeConversations_fn).call(this, userMessage, systemPrompt);
         if (__privateGet(this, _debug2)) {
-          __privateGet(this, _log2).call(this, "messages", messages);
+          __privateGet(this, _log2).call(this, "history messages", messages);
         }
         if (onProgress) {
           const responseMessage = {
