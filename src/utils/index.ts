@@ -15,3 +15,14 @@ export function getReadLine() {
 export function genId() {
   return uuid()
 }
+
+export function isString(target: any) {
+  return Object.prototype.toString.call(target) === '[object String]'
+}
+
+export function isArray(target: any) {
+  return Object.prototype.toString.call(target) === '[object Array]'
+}
+export function isObject(target: any) {
+  return Object.prototype.toString.call(target) === '[object Object]'
+}

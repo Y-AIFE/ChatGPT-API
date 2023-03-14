@@ -164,7 +164,7 @@ export interface IChatGPTParams {
    */
   ignoreServerMessagesInPrompt?: boolean
 
-  log?: TLog 
+  log?: TLog
 }
 
 /**
@@ -195,3 +195,12 @@ export type TCommonMessage =
  * Pass in your own logger
  */
 export type TLog = (msg: string, ...args: any[]) => void
+
+export interface ISendMessagesOpts {
+  text?: string
+  systemPrompt?: string
+  parentMessageId?: string
+  onProgress?: (t: string) => void
+  onEnd?: (d: IChatCompletionStreamOnEndData) => void
+  initialMessages?: TCommonMessage[]
+}

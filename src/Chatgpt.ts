@@ -13,10 +13,12 @@ import {
   IChatCompletionStreamOnEndData,
   IChatCompletionErrReponseData,
   TLog,
+  TCommonMessage,
+  ISendMessagesOpts,
 } from './types'
 import { post } from './utils/request'
 import URLS from './utils/urls'
-import { genId, log as defaultLog } from './utils'
+import { genId, log as defaultLog, isString, isArray } from './utils'
 
 // https://platform.openai.com/docs/api-reference/chat
 // curl https://api.openai.com/v1/chat/completions \
@@ -80,6 +82,27 @@ export class ChatGPT {
   }
 
   /**
+   * get related messages
+   * @param parentMessageId
+   */
+  async getMessages(opts: {
+    id: string
+    maxDepth?: number
+  }): Promise<TCommonMessage[]> {
+    const messages = await this.#store.getMessages(opts)
+    return messages
+  }
+
+  /**
+   * add messages to store
+   * @param messages
+   * @returns
+   */
+  async addMessages(messages: TCommonMessage[]) {
+    return await this.#store.set(messages)
+  }
+
+  /**
    * send message to ChatGPT server
    * @param opts.text new message
    * @param opts.systemPrompt prompt message
@@ -87,25 +110,32 @@ export class ChatGPT {
    */
   sendMessage(
     opts:
-      | {
-          text: string
-          systemPrompt?: string
-          parentMessageId?: string
-          onProgress?: (t: string) => void
-          onEnd?: (d: IChatCompletionStreamOnEndData) => void
-        }
-      | string,
+      | ISendMessagesOpts
+      | string
+      | TCommonMessage[],
   ) {
     return new Promise<IChatCompletionStreamOnEndData | null>(
       async (resolve, reject) => {
-        opts = typeof opts === 'string' ? { text: opts } : opts
+        if (isString(opts)) {
+          opts = { text: opts as string }
+        } else if (isArray(opts)) {
+          opts = { initialMessages: opts as TCommonMessage[] }
+        } else {
+          // 使用对象传入，必须要设置 text
+          if(!(opts as ISendMessagesOpts).text || !(opts as ISendMessagesOpts).initialMessages) {
+            return reject('You are passing in an object and it is required to set the text or initialMessages attribute.')
+          }
+        }
         let {
-          text,
+          text = '',
           systemPrompt = undefined,
           parentMessageId = undefined,
           onProgress = false,
           onEnd = () => {},
-        } = opts
+          initialMessages = undefined,
+        } = opts as ISendMessagesOpts
+        // 是否需要把数据存储到 store 中
+        const shouldAddToStore = !initialMessages
         if (systemPrompt) {
           if (parentMessageId)
             await this.#store.clear1Conversation(parentMessageId)
@@ -118,10 +148,15 @@ export class ChatGPT {
           parentMessageId,
           tokens: this.#tokenizer.getTokenCnt(text),
         }
-        const messages = await this.#makeConversations(
-          userMessage,
-          systemPrompt,
-        )
+        let messages: IChatGPTHTTPDataMessage[] = []
+        if (shouldAddToStore) {
+          messages = await this.#makeConversations(userMessage, systemPrompt)
+        } else {
+          messages = (initialMessages as TCommonMessage[]).map((msg) => ({
+            role: msg.role,
+            content: msg.text,
+          }))
+        }
         if (this.#debug) {
           this.#log('history messages', messages)
         }
@@ -131,22 +166,28 @@ export class ChatGPT {
             text: '',
             created: Math.floor(Date.now() / 1000),
             role: ERole.assistant,
-            parentMessageId: userMessage.id,
+            parentMessageId: shouldAddToStore
+              ? userMessage.id
+              : (initialMessages as TCommonMessage[])[
+                  (initialMessages as TCommonMessage[]).length - 1
+                ].id,
             tokens: 0,
           }
           const innerOnEnd = async () => {
-            const msgsToBeStored = [userMessage, responseMessage]
-            if (systemPrompt) {
-              const systemMessage: IChatGPTSystemMessage = {
-                id: genId(),
-                text: systemPrompt,
-                role: ERole.system,
-                tokens: this.#tokenizer.getTokenCnt(systemPrompt),
+            if (shouldAddToStore) {
+              const msgsToBeStored = [userMessage, responseMessage]
+              if (systemPrompt) {
+                const systemMessage: IChatGPTSystemMessage = {
+                  id: genId(),
+                  text: systemPrompt,
+                  role: ERole.system,
+                  tokens: this.#tokenizer.getTokenCnt(systemPrompt),
+                }
+                userMessage.parentMessageId = systemMessage.id
+                msgsToBeStored.unshift(systemMessage)
               }
-              userMessage.parentMessageId = systemMessage.id
-              msgsToBeStored.unshift(systemMessage)
+              await this.#store.set(msgsToBeStored)
             }
-            await this.#store.set(msgsToBeStored)
             resolve(null)
           }
           await this.#streamChat(
@@ -170,21 +211,27 @@ export class ChatGPT {
             text: res?.choices[0]?.message?.content,
             created: res.created,
             role: ERole.assistant,
-            parentMessageId: userMessage.id,
+            parentMessageId: shouldAddToStore
+              ? userMessage.id
+              : (initialMessages as TCommonMessage[])[
+                  (initialMessages as TCommonMessage[]).length - 1
+                ].id,
             tokens: res?.usage?.completion_tokens,
           }
-          const msgsToBeStored = [userMessage, responseMessage]
-          if (systemPrompt) {
-            const systemMessage: IChatGPTSystemMessage = {
-              id: genId(),
-              text: systemPrompt,
-              role: ERole.system,
-              tokens: this.#tokenizer.getTokenCnt(systemPrompt),
+          if (shouldAddToStore) {
+            const msgsToBeStored = [userMessage, responseMessage]
+            if (systemPrompt) {
+              const systemMessage: IChatGPTSystemMessage = {
+                id: genId(),
+                text: systemPrompt,
+                role: ERole.system,
+                tokens: this.#tokenizer.getTokenCnt(systemPrompt),
+              }
+              userMessage.parentMessageId = systemMessage.id
+              msgsToBeStored.unshift(systemMessage)
             }
-            userMessage.parentMessageId = systemMessage.id
-            msgsToBeStored.unshift(systemMessage)
+            await this.#store.set(msgsToBeStored)
           }
-          await this.#store.set(msgsToBeStored)
           resolve({
             success: true,
             data: responseMessage,

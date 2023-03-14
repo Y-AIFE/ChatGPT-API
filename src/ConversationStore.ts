@@ -132,9 +132,30 @@ export default class ConversationStore {
     if (this.#debug) {
       this.#log('availableTokens', availableTokens)
       this.#log('[ConversationStore findMessages end]', messages)
-      if(id) {
-        this.#log('[parentMessage]', await this.#store.get(id))
+    }
+    return messages
+  }
+
+  async getMessages(opts: { id: string; maxDepth?: number }) {
+    let { id = undefined, maxDepth = 30 } = opts
+    if (this.#debug) {
+      this.#log('[ConversationStore getMessages start]', { id, maxDepth })
+    }
+    let parentMessageId: string | undefined = id
+    let cnt = 0
+    const messages: TCommonMessage[] = []
+    while (parentMessageId && cnt < this.#maxFindDepth) {
+      const msg: TCommonMessage | undefined = await this.#store.get(
+        parentMessageId,
+      )
+      if (msg) {
+        messages.unshift(msg)
+        cnt++
       }
+      parentMessageId = msg?.parentMessageId
+    }
+    if (this.#debug) {
+      this.#log('[ConversationStore getMessages end]', messages)
     }
     return messages
   }
@@ -143,5 +164,8 @@ export default class ConversationStore {
    */
   async clearAll() {
     await this.#store.clear()
+  }
+  getStoreSize(): number {
+    return this.#lru.size
   }
 }

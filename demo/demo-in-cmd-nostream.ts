@@ -9,6 +9,13 @@ import apiKey from './.key'
 const api = new ChatGPT({
   apiKey,
   debug: true,
+  requestConfig: {
+    proxy: {
+      protocol: 'http',
+      host: '127.0.0.1',
+      port: 7890,
+    },
+  },
 })
 
 void (async function () {
