@@ -1,1 +1,2 @@
-- 允许传入 logger
+- 暴露 getMessages、addMessage
+- sendMessage 允许自己传入 messages，传递的是 messages 那么消息不会被 store 记录

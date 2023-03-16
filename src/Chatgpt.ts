@@ -108,12 +108,7 @@ export class ChatGPT {
    * @param opts.systemPrompt prompt message
    * @param opts.parentMessageId
    */
-  sendMessage(
-    opts:
-      | ISendMessagesOpts
-      | string
-      | TCommonMessage[],
-  ) {
+  sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]) {
     return new Promise<IChatCompletionStreamOnEndData | null>(
       async (resolve, reject) => {
         if (isString(opts)) {
@@ -122,8 +117,13 @@ export class ChatGPT {
           opts = { initialMessages: opts as TCommonMessage[] }
         } else {
           // 使用对象传入，必须要设置 text
-          if(!(opts as ISendMessagesOpts).text || !(opts as ISendMessagesOpts).initialMessages) {
-            return reject('You are passing in an object and it is required to set the text or initialMessages attribute.')
+          if (
+            !(opts as ISendMessagesOpts).text &&
+            !(opts as ISendMessagesOpts).initialMessages
+          ) {
+            return reject(
+              'You are passing in an object and it is required to set the text or initialMessages attribute.',
+            )
           }
         }
         let {
@@ -417,5 +417,9 @@ export class ChatGPT {
    */
   #genAuthorization() {
     return `Bearer ${this.#apiKey}`
+  }
+
+  getStoreSize() {
+    return this.#store.getStoreSize()
   }
 }

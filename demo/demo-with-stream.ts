@@ -1,5 +1,5 @@
 import apiKey from './.key'
-import { ChatGPT } from '../src'
+import { ChatGPT, ERole } from '../src'
 
 const api = new ChatGPT({
   apiKey: apiKey, // get api key
@@ -22,7 +22,10 @@ function logger(msg: string, ...args: any[]): void {
 async function run() {
   try {
     const res = await api.sendMessage({
-      text: '你好呀',
+      initialMessages: [
+        { id: '000', text: '你是一个美食博主', role: ERole.system },
+        { id: '001', text: '你好，西瓜可以做成哪些美食', role: ERole.user },
+      ],
       onProgress(t) {
         console.log('[onProgress]', t)
       },
@@ -31,6 +34,7 @@ async function run() {
       },
     })
     console.log('res', res)
+    console.log('store size', (await api.getStoreSize()) === 0)
   } catch (e) {
     console.log('err', JSON.stringify(e))
   }
