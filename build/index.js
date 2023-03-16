@@ -186,9 +186,29 @@ var ConversationStore = class {
     if (__privateGet(this, _debug)) {
       __privateGet(this, _log).call(this, "availableTokens", availableTokens);
       __privateGet(this, _log).call(this, "[ConversationStore findMessages end]", messages);
-      if (id) {
-        __privateGet(this, _log).call(this, "[parentMessage]", await __privateGet(this, _store).get(id));
+    }
+    return messages;
+  }
+  async getMessages(opts) {
+    let { id = void 0, maxDepth = 30 } = opts;
+    if (__privateGet(this, _debug)) {
+      __privateGet(this, _log).call(this, "[ConversationStore getMessages start]", { id, maxDepth });
+    }
+    let parentMessageId = id;
+    let cnt = 0;
+    const messages = [];
+    while (parentMessageId && cnt < __privateGet(this, _maxFindDepth)) {
+      const msg = await __privateGet(this, _store).get(
+        parentMessageId
+      );
+      if (msg) {
+        messages.unshift(msg);
+        cnt++;
       }
+      parentMessageId = msg == null ? void 0 : msg.parentMessageId;
+    }
+    if (__privateGet(this, _debug)) {
+      __privateGet(this, _log).call(this, "[ConversationStore getMessages end]", messages);
     }
     return messages;
   }
@@ -197,6 +217,9 @@ var ConversationStore = class {
    */
   async clearAll() {
     await __privateGet(this, _store).clear();
+  }
+  getStoreSize() {
+    return __privateGet(this, _lru).size;
   }
 };
 _store = new WeakMap();
@@ -291,6 +314,12 @@ function log(...args) {
 function genId() {
   return (0, import_uuid.v4)();
 }
+function isString(target) {
+  return Object.prototype.toString.call(target) === "[object String]";
+}
+function isArray(target) {
+  return Object.prototype.toString.call(target) === "[object Array]";
+}
 
 // src/Chatgpt.ts
 function genDefaultSystemMessage() {
@@ -356,6 +385,22 @@ var ChatGPT = class {
     }));
   }
   /**
+   * get related messages
+   * @param parentMessageId
+   */
+  async getMessages(opts) {
+    const messages = await __privateGet(this, _store2).getMessages(opts);
+    return messages;
+  }
+  /**
+   * add messages to store
+   * @param messages
+   * @returns
+   */
+  async addMessages(messages) {
+    return await __privateGet(this, _store2).set(messages);
+  }
+  /**
    * send message to ChatGPT server
    * @param opts.text new message
    * @param opts.systemPrompt prompt message
@@ -365,15 +410,27 @@ var ChatGPT = class {
     return new Promise(
       async (resolve, reject) => {
         var _a, _b, _c;
-        opts = typeof opts === "string" ? { text: opts } : opts;
+        if (isString(opts)) {
+          opts = { text: opts };
+        } else if (isArray(opts)) {
+          opts = { initialMessages: opts };
+        } else {
+          if (!opts.text && !opts.initialMessages) {
+            return reject(
+              "You are passing in an object and it is required to set the text or initialMessages attribute."
+            );
+          }
+        }
         let {
-          text,
+          text = "",
           systemPrompt = void 0,
           parentMessageId = void 0,
           onProgress = false,
           onEnd = () => {
-          }
+          },
+          initialMessages = void 0
         } = opts;
+        const shouldAddToStore = !initialMessages;
         if (systemPrompt) {
           if (parentMessageId)
             await __privateGet(this, _store2).clear1Conversation(parentMessageId);
@@ -386,7 +443,15 @@ var ChatGPT = class {
           parentMessageId,
           tokens: __privateGet(this, _tokenizer2).getTokenCnt(text)
         };
-        const messages = await __privateMethod(this, _makeConversations, makeConversations_fn).call(this, userMessage, systemPrompt);
+        let messages = [];
+        if (shouldAddToStore) {
+          messages = await __privateMethod(this, _makeConversations, makeConversations_fn).call(this, userMessage, systemPrompt);
+        } else {
+          messages = initialMessages.map((msg) => ({
+            role: msg.role,
+            content: msg.text
+          }));
+        }
         if (__privateGet(this, _debug2)) {
           __privateGet(this, _log2).call(this, "history messages", messages);
         }
@@ -396,22 +461,24 @@ var ChatGPT = class {
             text: "",
             created: Math.floor(Date.now() / 1e3),
             role: "assistant" /* assistant */,
-            parentMessageId: userMessage.id,
+            parentMessageId: shouldAddToStore ? userMessage.id : initialMessages[initialMessages.length - 1].id,
             tokens: 0
           };
           const innerOnEnd = async () => {
-            const msgsToBeStored = [userMessage, responseMessage];
-            if (systemPrompt) {
-              const systemMessage = {
-                id: genId(),
-                text: systemPrompt,
-                role: "system" /* system */,
-                tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
-              };
-              userMessage.parentMessageId = systemMessage.id;
-              msgsToBeStored.unshift(systemMessage);
+            if (shouldAddToStore) {
+              const msgsToBeStored = [userMessage, responseMessage];
+              if (systemPrompt) {
+                const systemMessage = {
+                  id: genId(),
+                  text: systemPrompt,
+                  role: "system" /* system */,
+                  tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
+                };
+                userMessage.parentMessageId = systemMessage.id;
+                msgsToBeStored.unshift(systemMessage);
+              }
+              await __privateGet(this, _store2).set(msgsToBeStored);
             }
-            await __privateGet(this, _store2).set(msgsToBeStored);
             resolve(null);
           };
           await __privateMethod(this, _streamChat, streamChat_fn).call(this, messages, onProgress, responseMessage, innerOnEnd, onEnd);
@@ -429,21 +496,23 @@ var ChatGPT = class {
             text: (_b = (_a = res == null ? void 0 : res.choices[0]) == null ? void 0 : _a.message) == null ? void 0 : _b.content,
             created: res.created,
             role: "assistant" /* assistant */,
-            parentMessageId: userMessage.id,
+            parentMessageId: shouldAddToStore ? userMessage.id : initialMessages[initialMessages.length - 1].id,
             tokens: (_c = res == null ? void 0 : res.usage) == null ? void 0 : _c.completion_tokens
           };
-          const msgsToBeStored = [userMessage, responseMessage];
-          if (systemPrompt) {
-            const systemMessage = {
-              id: genId(),
-              text: systemPrompt,
-              role: "system" /* system */,
-              tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
-            };
-            userMessage.parentMessageId = systemMessage.id;
-            msgsToBeStored.unshift(systemMessage);
+          if (shouldAddToStore) {
+            const msgsToBeStored = [userMessage, responseMessage];
+            if (systemPrompt) {
+              const systemMessage = {
+                id: genId(),
+                text: systemPrompt,
+                role: "system" /* system */,
+                tokens: __privateGet(this, _tokenizer2).getTokenCnt(systemPrompt)
+              };
+              userMessage.parentMessageId = systemMessage.id;
+              msgsToBeStored.unshift(systemMessage);
+            }
+            await __privateGet(this, _store2).set(msgsToBeStored);
           }
-          await __privateGet(this, _store2).set(msgsToBeStored);
           resolve({
             success: true,
             data: responseMessage,
@@ -455,6 +524,9 @@ var ChatGPT = class {
   }
   async clear1Conversation(parentMessageId) {
     return await __privateGet(this, _store2).clear1Conversation(parentMessageId);
+  }
+  getStoreSize() {
+    return __privateGet(this, _store2).getStoreSize();
   }
 };
 _apiKey = new WeakMap();
