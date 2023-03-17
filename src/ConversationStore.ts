@@ -144,7 +144,7 @@ export default class ConversationStore {
     let parentMessageId: string | undefined = id
     let cnt = 0
     const messages: TCommonMessage[] = []
-    while (parentMessageId && cnt < this.#maxFindDepth) {
+    while (parentMessageId && cnt < maxDepth) {
       const msg: TCommonMessage | undefined = await this.#store.get(
         parentMessageId,
       )
