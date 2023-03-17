@@ -111,22 +111,31 @@ interface IChatGPTParams {
 
 ```typescript
 declare class ChatGPT {
-  #private;
-  constructor(opts: IChatGPTParams);
-  /**
-   * send message to ChatGPT server
-   * @param opts.text new message
-   * @param opts.systemPrompt prompt message
-   * @param opts.parentMessageId
-   */
-  sendMessage(opts: {
-      text: string;
-      systemPrompt?: string;
-      parentMessageId?: string;
-      onProgress?: (t: string) => void;
-      onEnd?: (d: IChatCompletionStreamOnEndData) => void;
-  } | string): Promise<IChatCompletionStreamOnEndData | null>;
-  clear1Conversation(parentMessageId?: string): Promise<void>;
+    #private;
+    constructor(opts: IChatGPTParams);
+    /**
+     * get related messages
+     * @param parentMessageId
+     */
+    getMessages(opts: {
+        id: string;
+        maxDepth?: number;
+    }): Promise<TCommonMessage[]>;
+    /**
+     * add messages to store
+     * @param messages
+     * @returns
+     */
+    addMessages(messages: TCommonMessage[]): Promise<void>;
+    /**
+     * send message to ChatGPT server
+     * @param opts.text new message
+     * @param opts.systemPrompt prompt message
+     * @param opts.parentMessageId
+     */
+    sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]): Promise<IChatCompletionStreamOnEndData | null>;
+    clear1Conversation(parentMessageId?: string): Promise<void>;
+    getStoreSize(): number;
 }
 ```
 

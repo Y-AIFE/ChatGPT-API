@@ -197,7 +197,7 @@ var ConversationStore = class {
     let parentMessageId = id;
     let cnt = 0;
     const messages = [];
-    while (parentMessageId && cnt < __privateGet(this, _maxFindDepth)) {
+    while (parentMessageId && cnt < maxDepth) {
       const msg = await __privateGet(this, _store).get(
         parentMessageId
       );
