@@ -286,7 +286,14 @@ async function post(config, opts) {
       return config2;
     });
   }
-  const response = await ins({ ...config });
+  ins.interceptors.response.use((data) => {
+    log2("ins.interceptors.response resolve", {});
+    return data;
+  }, (err) => {
+    log2("ins.interceptors.response reject", String(err));
+    return err;
+  });
+  const response = await ins({ timeout: 1e4, ...config });
   return response;
 }
 
@@ -327,7 +334,6 @@ function genDefaultSystemMessage() {
   return {
     role: "system" /* system */,
     content: `You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.
-Knowledge cutoff: 2021-09-01
 Current date: ${currentDate}`
   };
 }
@@ -590,24 +596,39 @@ streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEn
       onEnd && onEnd({
         success: true,
         data: responseMessagge,
-        status: axiosResponse.status
-      });
-    });
-  } else {
-    let data = stream.on("data", (buf) => {
-      data = JSON.parse(buf.toString());
-    });
-    stream.on("end", () => {
-      var _a, _b;
-      onEnd && onEnd({
-        success: false,
-        data: {
-          message: (_a = data == null ? void 0 : data.error) == null ? void 0 : _a.message,
-          type: (_b = data == null ? void 0 : data.error) == null ? void 0 : _b.type
-        },
         status
       });
     });
+  } else {
+    if (stream) {
+      let data = void 0;
+      stream.on("data", (buf) => {
+        data = JSON.parse(buf.toString());
+      });
+      stream.on("end", () => {
+        var _a, _b;
+        onEnd && onEnd({
+          success: false,
+          data: {
+            message: (_a = data == null ? void 0 : data.error) == null ? void 0 : _a.message,
+            type: (_b = data == null ? void 0 : data.error) == null ? void 0 : _b.type
+          },
+          status
+        });
+      });
+    } else {
+      const isTimeoutErr = String(axiosResponse).includes(
+        "AxiosError: timeout of"
+      );
+      onEnd && onEnd({
+        success: false,
+        data: {
+          message: isTimeoutErr ? "request timeout" : "unknow err",
+          type: isTimeoutErr ? "error" : "unknow err"
+        },
+        status: 500
+      });
+    }
   }
 };
 _chat = new WeakSet();
@@ -642,6 +663,19 @@ chat_fn = async function(messages) {
       status
     };
   } else {
+    const isTimeoutErr = String(axiosResponse).includes(
+      "AxiosError: timeout of"
+    );
+    if (isTimeoutErr) {
+      return {
+        success: false,
+        data: {
+          message: "request timeout",
+          type: "error"
+        },
+        status: 500
+      };
+    }
     return {
       success: false,
       data: {
