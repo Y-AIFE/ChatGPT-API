@@ -36,7 +36,14 @@ export async function post(config: RawAxiosRequestConfig, opts: IRequestOpts) {
       return config
     })
   }
-  const response = await ins({ ...config })
+  ins.interceptors.response.use((data) => {
+    log('ins.interceptors.response resolve', {})
+    return data
+  }, (err) => {
+    log('ins.interceptors.response reject', String(err))
+    return err
+  })
+  const response = await ins({ timeout: 10000, ...config })
   return response
 }
 

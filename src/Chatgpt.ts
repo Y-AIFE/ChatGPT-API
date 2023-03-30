@@ -33,7 +33,7 @@ function genDefaultSystemMessage(): IChatGPTHTTPDataMessage {
   const currentDate = new Date().toISOString().split('T')[0]
   return {
     role: ERole.system,
-    content: `You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.\nKnowledge cutoff: 2021-09-01\nCurrent date: ${currentDate}`,
+    content: `You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.\nCurrent date: ${currentDate}`,
   }
 }
 
@@ -271,7 +271,7 @@ export class ChatGPT {
         log: this.#log,
       },
     )
-    const stream = axiosResponse.data
+    const stream = axiosResponse.data // 请求被取消之后变成 undefined
     const status = axiosResponse.status
     if (this.#validateAxiosResponse(status)) {
       stream.on('data', (buf: any) => {
@@ -299,32 +299,46 @@ export class ChatGPT {
           onEnd({
             success: true,
             data: responseMessagge,
-            status: axiosResponse.status,
+            status,
           })
       })
     } else {
-      let data: any = stream.on('data', (buf: any) => {
-        data = JSON.parse(buf.toString())
-        // that is stream
-        // error: {
-        //     message: 'Your access was terminated due to violation of our policies, please check your email for more information. If you believe this is in error and would like to appeal, please contact support@openai.com.',
-        //     type: 'access_terminated',
-        //     param: null,
-        //     code: null
-        //   }
-        // }
-      })
-      stream.on('end', () => {
+      if (stream) {
+        let data: any = undefined
+        stream.on('data', (buf: any) => {
+          data = JSON.parse(buf.toString())
+          // that is stream
+          // error: {
+          //     message: 'Your access was terminated due to violation of our policies, please check your email for more information. If you believe this is in error and would like to appeal, please contact support@openai.com.',
+          //     type: 'access_terminated',
+          //     param: null,
+          //     code: null
+          //   }
+          // }
+        })
+        stream.on('end', () => {
+          onEnd &&
+            onEnd({
+              success: false,
+              data: {
+                message: data?.error?.message,
+                type: data?.error?.type,
+              },
+              status,
+            })
+        })
+      } else {
+        const isTimeoutErr = String(axiosResponse).includes('AxiosError: timeout of')
         onEnd &&
           onEnd({
             success: false,
             data: {
-              message: data?.error?.message,
-              type: data?.error?.type,
+              message: isTimeoutErr ? 'request timeout': 'unknow err',
+              type: isTimeoutErr ? 'error': 'unknow err',
             },
-            status,
+            status: 500,
           })
-      })
+      }
     }
   }
 
