@@ -328,13 +328,15 @@ export class ChatGPT {
             })
         })
       } else {
-        const isTimeoutErr = String(axiosResponse).includes('AxiosError: timeout of')
+        const isTimeoutErr = String(axiosResponse).includes(
+          'AxiosError: timeout of',
+        )
         onEnd &&
           onEnd({
             success: false,
             data: {
-              message: isTimeoutErr ? 'request timeout': 'unknow err',
-              type: isTimeoutErr ? 'error': 'unknow err',
+              message: isTimeoutErr ? 'request timeout' : 'unknow err',
+              type: isTimeoutErr ? 'error' : 'unknow err',
             },
             status: 500,
           })
@@ -373,6 +375,19 @@ export class ChatGPT {
         status,
       }
     } else {
+      const isTimeoutErr = String(axiosResponse).includes(
+        'AxiosError: timeout of',
+      )
+      if (isTimeoutErr) {
+        return {
+          success: false,
+          data: {
+            message: 'request timeout',
+            type: 'error',
+          },
+          status: 500,
+        }
+      }
       return {
         success: false,
         data: {
