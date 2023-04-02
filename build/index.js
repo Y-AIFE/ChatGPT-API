@@ -287,7 +287,6 @@ async function post(config, opts) {
     });
   }
   ins.interceptors.response.use((data) => {
-    log2("ins.interceptors.response resolve", {});
     return data;
   }, (err) => {
     log2("ins.interceptors.response reject", String(err));
