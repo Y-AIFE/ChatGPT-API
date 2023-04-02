@@ -37,7 +37,7 @@ export async function post(config: RawAxiosRequestConfig, opts: IRequestOpts) {
     })
   }
   ins.interceptors.response.use((data) => {
-    log('ins.interceptors.response resolve', {})
+    // log('ins.interceptors.response resolve', {})
     return data
   }, (err) => {
     log('ins.interceptors.response reject', String(err))
