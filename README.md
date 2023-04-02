@@ -57,7 +57,6 @@ You can get API key at [https://platform.openai.com/account/api-keys](https://pl
 ## api
 
 ```typescript
-
 interface IChatGPTParams {
   /**
    * apiKey, you can get it in https://platform.openai.com/account/api-keys,You can apply for up to 5 at most.
@@ -80,11 +79,11 @@ interface IChatGPTParams {
    */
   storeConfig?: {
       /**
-       * lru max keys, default `100000`
+       * lru max keys, default `300000`
        */
       maxKeys?: number;
       /**
-       * Recursively search for historical messages, default `20` messages will be sent to the ChatGPT server
+       * Recursively search for historical messages, default `30` messages will be sent to the ChatGPT server
        */
       maxFindDepth?: number;
   };
@@ -110,32 +109,42 @@ interface IChatGPTParams {
 ```
 
 ```typescript
+interface ISendMessagesOpts {
+  text?: string;
+  systemPrompt?: string;
+  parentMessageId?: string;
+  onProgress?: (t: string) => void;
+  onEnd?: (d: IChatCompletionStreamOnEndData) => void;
+  initialMessages?: TCommonMessage[];
+  model?: string;
+}
+
 declare class ChatGPT {
-    #private;
-    constructor(opts: IChatGPTParams);
-    /**
-     * get related messages
-     * @param parentMessageId
-     */
-    getMessages(opts: {
-        id: string;
-        maxDepth?: number;
-    }): Promise<TCommonMessage[]>;
-    /**
-     * add messages to store
-     * @param messages
-     * @returns
-     */
-    addMessages(messages: TCommonMessage[]): Promise<void>;
-    /**
-     * send message to ChatGPT server
-     * @param opts.text new message
-     * @param opts.systemPrompt prompt message
-     * @param opts.parentMessageId
-     */
-    sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]): Promise<IChatCompletionStreamOnEndData | null>;
-    clear1Conversation(parentMessageId?: string): Promise<void>;
-    getStoreSize(): number;
+  #private;
+  constructor(opts: IChatGPTParams);
+  /**
+   * get related messages
+   * @param parentMessageId
+   */
+  getMessages(opts: {
+      id: string;
+      maxDepth?: number;
+  }): Promise<TCommonMessage[]>;
+  /**
+   * add messages to store
+   * @param messages
+   * @returns
+   */
+  addMessages(messages: TCommonMessage[]): Promise<void>;
+  /**
+   * send message to ChatGPT server
+   * @param opts.text new message
+   * @param opts.systemPrompt prompt message
+   * @param opts.parentMessageId
+   */
+  sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]): Promise<IChatCompletionStreamOnEndData | null>;
+  clear1Conversation(parentMessageId?: string): Promise<void>;
+  getStoreSize(): number;
 }
 ```
 
