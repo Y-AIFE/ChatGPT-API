@@ -81,7 +81,7 @@ var ConversationStore = class {
     __privateAdd(this, _maxFindDepth, void 0);
     __privateAdd(this, _debug, void 0);
     __privateAdd(this, _log, void 0);
-    const { maxKeys = 1e5, maxFindDepth = 20, debug, log: log2 } = params;
+    const { maxKeys = 3e5, maxFindDepth = 30, debug, log: log2 } = params;
     __privateSet(this, _lru, new import_lru_cache.default({
       max: maxKeys
     }));
@@ -434,7 +434,8 @@ var ChatGPT = class {
           onProgress = false,
           onEnd = () => {
           },
-          initialMessages = void 0
+          initialMessages = void 0,
+          model = __privateGet(this, _model)
         } = opts;
         const shouldAddToStore = !initialMessages;
         if (systemPrompt) {
@@ -487,9 +488,9 @@ var ChatGPT = class {
             }
             resolve(null);
           };
-          await __privateMethod(this, _streamChat, streamChat_fn).call(this, messages, onProgress, responseMessage, innerOnEnd, onEnd);
+          await __privateMethod(this, _streamChat, streamChat_fn).call(this, messages, onProgress, responseMessage, innerOnEnd, onEnd, model);
         } else {
-          const chatResponse = await __privateMethod(this, _chat, chat_fn).call(this, messages);
+          const chatResponse = await __privateMethod(this, _chat, chat_fn).call(this, messages, model);
           if (!chatResponse.success) {
             return resolve({
               ...chatResponse,
@@ -547,7 +548,7 @@ _limitTokensInAMessage = new WeakMap();
 _ignoreServerMessagesInPrompt = new WeakMap();
 _log2 = new WeakMap();
 _streamChat = new WeakSet();
-streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEnd, onEnd) {
+streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEnd, onEnd, model) {
   const axiosResponse = await post(
     {
       url: __privateGet(this, _urls).createChatCompletion,
@@ -559,7 +560,7 @@ streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEn
       },
       data: {
         stream: true,
-        model: __privateGet(this, _model),
+        model,
         messages,
         ...{ ...__privateGet(this, _requestConfig).data || {} }
       },
@@ -632,7 +633,7 @@ streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEn
   }
 };
 _chat = new WeakSet();
-chat_fn = async function(messages) {
+chat_fn = async function(messages, model) {
   var _a, _b;
   const axiosResponse = await post(
     {
@@ -644,7 +645,7 @@ chat_fn = async function(messages) {
         ...{ ...__privateGet(this, _requestConfig).headers || {} }
       },
       data: {
-        model: __privateGet(this, _model),
+        model,
         messages,
         ...{ ...__privateGet(this, _requestConfig).data || {} }
       }
