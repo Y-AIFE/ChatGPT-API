@@ -5,7 +5,7 @@ const api = new ChatGPT({
   apiKey: apiKey, // get api key
   debug: true,
   requestConfig: {
-    timeout: 500,
+    timeout: 5000,
     proxy: {
       protocol: 'http',
       host: '127.0.0.1',
@@ -17,6 +17,7 @@ const api = new ChatGPT({
 async function run() {
   const res = await api.sendMessage({
     text: '不吃早饭对身体有没有坏处',
+    // model: 'gpt-3'
   })
   console.log('res', res)
 }

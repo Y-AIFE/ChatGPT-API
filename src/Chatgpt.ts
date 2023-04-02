@@ -131,8 +131,9 @@ export class ChatGPT {
           systemPrompt = undefined,
           parentMessageId = undefined,
           onProgress = false,
-          onEnd = () => {},
+          onEnd = () => { },
           initialMessages = undefined,
+          model =  this.#model,
         } = opts as ISendMessagesOpts
         // 是否需要把数据存储到 store 中
         const shouldAddToStore = !initialMessages
@@ -196,9 +197,10 @@ export class ChatGPT {
             responseMessage,
             innerOnEnd,
             onEnd,
+            model,
           )
         } else {
-          const chatResponse = await this.#chat(messages)
+          const chatResponse = await this.#chat(messages, model)
           if (!chatResponse.success) {
             return resolve({
               ...chatResponse,
@@ -247,7 +249,8 @@ export class ChatGPT {
     onProgress: boolean | ((t: string) => void),
     responseMessagge: IChatGPTResponse,
     innerOnEnd: () => void,
-    onEnd?: (d: IChatCompletionStreamOnEndData) => void,
+    onEnd: (d: IChatCompletionStreamOnEndData) => void,
+    model: string
   ) {
     const axiosResponse = await post(
       {
@@ -260,7 +263,7 @@ export class ChatGPT {
         },
         data: {
           stream: true,
-          model: this.#model,
+          model,
           messages,
           ...{ ...(this.#requestConfig.data || {}) },
         },
@@ -344,7 +347,7 @@ export class ChatGPT {
     }
   }
 
-  async #chat(messages: { content: string; role: ERole }[]) {
+  async #chat(messages: { content: string; role: ERole }[], model: string) {
     const axiosResponse = await post(
       {
         url: this.#urls.createChatCompletion,
@@ -355,7 +358,7 @@ export class ChatGPT {
           ...{ ...(this.#requestConfig.headers || {}) },
         },
         data: {
-          model: this.#model,
+          model,
           messages,
           ...{ ...(this.#requestConfig.data || {}) },
         },

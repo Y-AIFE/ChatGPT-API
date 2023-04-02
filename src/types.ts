@@ -203,4 +203,5 @@ export interface ISendMessagesOpts {
   onProgress?: (t: string) => void
   onEnd?: (d: IChatCompletionStreamOnEndData) => void
   initialMessages?: TCommonMessage[]
+  model?: string
 }

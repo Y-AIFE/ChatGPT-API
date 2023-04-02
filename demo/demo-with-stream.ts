@@ -17,6 +17,7 @@ const api = new ChatGPT({
 async function run() {
   api.sendMessage({
     text: '不吃早饭对身体有没有坏处',
+    model: 'gpt-3.5-turbo',
     onProgress(t) {
       console.log('[onProgress]', t)
     },
