@@ -146,6 +146,23 @@ declare class ChatGPT {
   clear1Conversation(parentMessageId?: string): Promise<void>;
   getStoreSize(): number;
 }
+interface IChatCompletionStreamOnEndData {
+  success: boolean
+  data: IChatGPTResponse | IChatCompletionErrReponseData
+  status: number
+}
+interface IChatGPTResponse {
+  id: string
+  text: string
+  created: number
+  role: ERole
+  parentMessageId?: string
+  tokens?: number
+}
+interface IChatCompletionErrReponseData {
+  message?: string
+  type?: string
+}
 ```
 
 ## demos
