@@ -47,12 +47,129 @@ async function run() {
   const res = await api.sendMessage({
     text: 'please introduce yourself',
   })
-  console.log(res.text)
+  console.log(res)
 }
 run()
+
+// res {
+//   success: true,
+//   data: {
+//     id: '753d6d2a-4352-423c-9ced-cec17e1acd64',
+//     text: '不吃早餐可能会导致身体出现一些不良反应，例如头昏、乏力、注意力不集中等。此外，长期不吃早餐还可能增加患肥胖症和糖尿病的风险。因此，建议每天都要吃早餐，以保持身体健康。',
+//     created: 1681634136,
+//     role: 'assistant',
+//     parentMessageId: '96d050ce-b53c-4357-a5bd-188008adf194',
+//     tokens: 172,
+//     len: 211
+//   },
+//   status: 200
+// }
 ```
 
 You can get API key at [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys).
+
+or response with stream:
+
+```typescript
+import apiKey from './.key'
+import { ChatGPT } from '../src'
+
+const api = new ChatGPT({
+  apiKey: apiKey, // get api key
+})
+
+async function run() {
+  const res = await api.sendMessage({
+    text: 'calc 1 + 2',
+    model: 'gpt-3.5-turbo',
+    onProgress(t) {
+      console.log('[onProgress]', t)
+    },
+    onEnd(t) {
+      console.log('[onEnd]', t)
+    },
+  })
+  console.log('res', res)
+}
+
+run()
+
+// [onProgress] 3
+// [onProgress] 
+// [onEnd] {
+//   success: true,
+//   data: {
+//     id: '14cb9244-a1bf-4152-8aba-1ee768fcc210',
+//     text: '3',
+//     created: 1681634268,
+//     role: 'assistant',
+//     parentMessageId: 'ae4f6881-0c54-4484-862c-2d31d8d394e3',
+//     tokens: 40,
+//     len: 127
+//   },
+//   status: 200
+// }
+// res {
+//   success: true,
+//   data: {
+//     id: '14cb9244-a1bf-4152-8aba-1ee768fcc210',
+//     text: '3',
+//     created: 1681634268,
+//     role: 'assistant',
+//     parentMessageId: 'ae4f6881-0c54-4484-862c-2d31d8d394e3',
+//     tokens: 40,
+//     len: 127
+//   },
+//   status: 200
+// }
+```
+
+or use it in terminal:
+
+![img](./assets/img1.png)
+
+```typescript
+import { getReadLine } from '../src/utils'
+import { ChatGPT } from '../src'
+import { IChatGPTResponse } from '../src/types'
+import apiKey from './.key'
+
+const api = new ChatGPT({
+  apiKey,
+})
+
+void (async function () {
+  console.log('---------------------your question------------------')
+  console.log({ text: '1 + 1=', systemPrompt: '你是一个计算器，接下来我会给你运算过程，你只需要给我结果' })
+  let prevRes = await api.sendMessage({
+    text: '1 + 1=',
+    systemPrompt: '你是一个计算器，接下来我会给你运算过程，你只需要给我结果',
+  })
+  console.log(prevRes && (prevRes.data as IChatGPTResponse).text)
+  let line = ''
+  const readline = getReadLine()
+  console.log('---------------------your question------------------')
+  while ((line = await readline())) {
+    prevRes = await basicRunner(
+      line,
+      prevRes ? (prevRes.data as IChatGPTResponse).id : undefined,
+    )
+    console.log('---------------------ChatGPT says------------------------')
+    console.log(prevRes && (prevRes.data as IChatGPTResponse).text)
+    console.log('---------------------your question------------------')
+  }
+})()
+
+async function basicRunner(text: string, parentMessageId?: string) {
+  const res = await api.sendMessage({
+    text,
+    parentMessageId,
+  })
+  return res
+}
+```
+
+**Note that there is a history of conversations stored within the SDK. When asking a question, the context from previous conversations will be used to continue the response.**
 
 ## api
 
@@ -151,17 +268,79 @@ interface IChatCompletionStreamOnEndData {
   data: IChatGPTResponse | IChatCompletionErrReponseData
   status: number
 }
-interface IChatGPTResponse {
+export interface IChatGPTResponse {
   id: string
+  /**
+   * response text
+   */
   text: string
   created: number
   role: ERole
   parentMessageId?: string
-  tokens?: number
+  /**
+   * questions and response text, tatal tokens
+   */
+  tokens: number
+  /**
+   * questions and response text, tatal length
+   */
+  len: number
 }
 interface IChatCompletionErrReponseData {
   message?: string
   type?: string
+}
+```
+
+## Advance
+
+**If the SDK is applied in a multi-process service, the conversation store will be created in each process. When a request is initiated, it may result in the inability to locate the historical conversation. In such a situation, you can split the SDK into two projects for use.**
+
+In the `api.sendMessage` method, if you pass `TCommonMessage[]` array, the SDK does not store historical conversations internally. 
+
+```typescript
+sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]): Promise<IChatCompletionStreamOnEndData>;
+```
+
+In the methods below, you can get messages from the store or set messages to the store.
+
+```typescript
+/**
+ * get related messages
+ * @param parentMessageId
+ */
+getMessages(opts: {
+    id: string;
+    maxDepth?: number;
+}): Promise<TCommonMessage[]>;
+/**
+ * add messages to store
+ * @param messages
+ * @returns
+ */
+addMessages(messages: TCommonMessage[]): Promise<void>;
+```
+
+## About `parentMessageId` and `id`
+
+In a question-response.
+
+```js
+messages = {
+  id: '384771f7-5b67-476b-ac43-522237ff0e99',
+  text: '不吃早饭对身体有没有坏处',
+  role: 'user',
+  parentMessageId: undefined,
+  tokens: 16
+}
+response = {
+  id: '4b51b42a-5b74-45c0-9e0d-ad14e68beb32',
+  text: '不吃早餐可能会对身体造成负面影响。早餐是一天中最重要的餐点之一，它可以为身体提供所需的能量和营养素，有助于维持健康体重和改善认知能力。不吃早餐可能会导致饥饿感、低血糖、营养不良、代谢问题等问题。',
+  created: 1681635939,
+  role: 'assistant',
+  parentMessageId: '384771f7-5b67-476b-ac43-522237ff0e99',  // refer to the question id
+  tokens: 189,
+  len: 225
 }
 ```
 
