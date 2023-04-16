@@ -63,11 +63,20 @@ export type TChatCompletionStreamOnEnd = (
  */
 export interface IChatGPTResponse {
   id: string
+  /**
+   * response text
+   */
   text: string
   created: number
   role: ERole
   parentMessageId?: string
+  /**
+   * questions and response text, tatal tokens
+   */
   tokens: number
+  /**
+   * questions and response text, tatal length
+   */
   len: number
 }
 /**
