@@ -67,7 +67,8 @@ export interface IChatGPTResponse {
   created: number
   role: ERole
   parentMessageId?: string
-  tokens?: number
+  tokens: number
+  len: number
 }
 /**
  * user message

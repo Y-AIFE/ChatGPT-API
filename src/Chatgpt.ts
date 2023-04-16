@@ -18,7 +18,13 @@ import {
 } from './types'
 import { post } from './utils/request'
 import URLS from './utils/urls'
-import { genId, log as defaultLog, isString, isArray } from './utils'
+import {
+  genId,
+  log as defaultLog,
+  isString,
+  isArray,
+  concatMessages,
+} from './utils'
 
 // https://platform.openai.com/docs/api-reference/chat
 // curl https://api.openai.com/v1/chat/completions \
@@ -109,7 +115,7 @@ export class ChatGPT {
    * @param opts.parentMessageId
    */
   sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]) {
-    return new Promise<IChatCompletionStreamOnEndData | null>(
+    return new Promise<IChatCompletionStreamOnEndData>(
       async (resolve, reject) => {
         if (isString(opts)) {
           opts = { text: opts as string }
@@ -131,9 +137,9 @@ export class ChatGPT {
           systemPrompt = undefined,
           parentMessageId = undefined,
           onProgress = false,
-          onEnd = () => { },
+          onEnd = () => {},
           initialMessages = undefined,
-          model =  this.#model,
+          model = this.#model,
         } = opts as ISendMessagesOpts
         // 是否需要把数据存储到 store 中
         const shouldAddToStore = !initialMessages
@@ -173,8 +179,11 @@ export class ChatGPT {
                   (initialMessages as TCommonMessage[]).length - 1
                 ].id,
             tokens: 0,
+            len: 0,
           }
-          const innerOnEnd = async () => {
+          const innerOnEnd = async (
+            endData: IChatCompletionStreamOnEndData,
+          ) => {
             if (shouldAddToStore) {
               const msgsToBeStored = [userMessage, responseMessage]
               if (systemPrompt) {
@@ -189,14 +198,14 @@ export class ChatGPT {
               }
               await this.#store.set(msgsToBeStored)
             }
-            resolve(null)
+            await onEnd(endData)
+            resolve(endData)
           }
           await this.#streamChat(
             messages,
             onProgress,
             responseMessage,
             innerOnEnd,
-            onEnd,
             model,
           )
         } else {
@@ -218,7 +227,10 @@ export class ChatGPT {
               : (initialMessages as TCommonMessage[])[
                   (initialMessages as TCommonMessage[]).length - 1
                 ].id,
-            tokens: res?.usage?.completion_tokens,
+            tokens: res?.usage?.total_tokens,
+            len:
+              (res?.choices[0]?.message?.content.length || 0) +
+              concatMessages(messages).length,
           }
           if (shouldAddToStore) {
             const msgsToBeStored = [userMessage, responseMessage]
@@ -248,9 +260,8 @@ export class ChatGPT {
     messages: { content: string; role: ERole }[],
     onProgress: boolean | ((t: string) => void),
     responseMessagge: IChatGPTResponse,
-    innerOnEnd: () => void,
-    onEnd: (d: IChatCompletionStreamOnEndData) => void,
-    model: string
+    innerOnEnd: (d: IChatCompletionStreamOnEndData) => void,
+    model: string,
   ) {
     const axiosResponse = await post(
       {
@@ -295,15 +306,15 @@ export class ChatGPT {
       })
       stream.on('end', async () => {
         responseMessagge.tokens = this.#tokenizer.getTokenCnt(
-          responseMessagge.text,
+          responseMessagge.text + concatMessages(messages),
         )
-        await innerOnEnd()
-        onEnd &&
-          onEnd({
-            success: true,
-            data: responseMessagge,
-            status,
-          })
+        responseMessagge.len =
+          responseMessagge.text.length + concatMessages(messages).length
+        await innerOnEnd({
+          success: true,
+          data: responseMessagge,
+          status,
+        })
       })
     } else {
       if (stream) {
@@ -319,30 +330,28 @@ export class ChatGPT {
           //   }
           // }
         })
-        stream.on('end', () => {
-          onEnd &&
-            onEnd({
-              success: false,
-              data: {
-                message: data?.error?.message,
-                type: data?.error?.type,
-              },
-              status,
-            })
+        stream.on('end', async () => {
+          await innerOnEnd({
+            success: false,
+            data: {
+              message: data?.error?.message,
+              type: data?.error?.type,
+            },
+            status,
+          })
         })
       } else {
         const isTimeoutErr = String(axiosResponse).includes(
           'AxiosError: timeout of',
         )
-        onEnd &&
-          onEnd({
-            success: false,
-            data: {
-              message: isTimeoutErr ? 'request timeout' : 'unknow err',
-              type: isTimeoutErr ? 'error' : 'unknow err',
-            },
-            status: 500,
-          })
+        await innerOnEnd({
+          success: false,
+          data: {
+            message: isTimeoutErr ? 'request timeout' : 'unknow err',
+            type: isTimeoutErr ? 'error' : 'unknow err',
+          },
+          status: 500,
+        })
       }
     }
   }
@@ -368,7 +377,6 @@ export class ChatGPT {
         log: this.#log,
       },
     )
-    // this.#logger('[#chat]', axiosResponse.status)
     const data = axiosResponse.data
     const status = axiosResponse.status
     if (this.#validateAxiosResponse(status)) {
