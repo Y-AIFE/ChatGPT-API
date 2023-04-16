@@ -3,20 +3,11 @@ import { ChatGPT } from '../src'
 
 const api = new ChatGPT({
   apiKey: apiKey, // get api key
-  debug: true,
-  requestConfig: {
-    timeout: 5000,
-    proxy: {
-      protocol: 'http',
-      host: '127.0.0.1',
-      port: 7890,
-    },
-  },
 })
 
 async function run() {
   const res = await api.sendMessage({
-    text: '不吃早饭对身体有没有坏处',
+    text: 'calc 1 + 2',
     model: 'gpt-3.5-turbo',
     onProgress(t) {
       console.log('[onProgress]', t)
@@ -29,3 +20,32 @@ async function run() {
 }
 
 run()
+
+// [onProgress] 3
+// [onProgress] 
+// [onEnd] {
+//   success: true,
+//   data: {
+//     id: '14cb9244-a1bf-4152-8aba-1ee768fcc210',
+//     text: '3',
+//     created: 1681634268,
+//     role: 'assistant',
+//     parentMessageId: 'ae4f6881-0c54-4484-862c-2d31d8d394e3',
+//     tokens: 40,
+//     len: 127
+//   },
+//   status: 200
+// }
+// res {
+//   success: true,
+//   data: {
+//     id: '14cb9244-a1bf-4152-8aba-1ee768fcc210',
+//     text: '3',
+//     created: 1681634268,
+//     role: 'assistant',
+//     parentMessageId: 'ae4f6881-0c54-4484-862c-2d31d8d394e3',
+//     tokens: 40,
+//     len: 127
+//   },
+//   status: 200
+// }
