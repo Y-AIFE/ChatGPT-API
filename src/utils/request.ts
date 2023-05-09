@@ -19,8 +19,8 @@ interface IRequestOpts {
 //   }
 //   return (await ins({ ...config })).data
 // }
-export async function post(config: RawAxiosRequestConfig, opts: IRequestOpts) {
-  const { debug, log } = opts
+export async function post(config: RawAxiosRequestConfig, opts?: IRequestOpts) {
+  const { debug = false, log = console.log } = opts || {}
   const ins = axios.create({
     method: 'POST',
     validateStatus(status) {
@@ -30,19 +30,25 @@ export async function post(config: RawAxiosRequestConfig, opts: IRequestOpts) {
   if (debug) {
     ins.interceptors.request.use((config) => {
       log('axios config', {
-        headers: config.headers,
+        headers: {
+          ...config.headers,
+          Authorization: undefined,
+        },
         data: config.data,
       })
       return config
     })
   }
-  ins.interceptors.response.use((data) => {
-    // log('ins.interceptors.response resolve', {})
-    return data
-  }, (err) => {
-    log('ins.interceptors.response reject', String(err))
-    return err
-  })
+  ins.interceptors.response.use(
+    (data) => {
+      // log('ins.interceptors.response resolve', {})
+      return data
+    },
+    (err) => {
+      log('ins.interceptors.response reject', String(err))
+      return err
+    },
+  )
   const response = await ins({ timeout: 10000, ...config })
   return response
 }

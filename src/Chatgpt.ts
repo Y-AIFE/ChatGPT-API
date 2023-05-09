@@ -462,4 +462,25 @@ export class ChatGPT {
   getStoreSize() {
     return this.#store.getStoreSize()
   }
+
+  async createModeration(input: string): Promise<boolean> {
+    const moderationRes = await post(
+      {
+        url: URLS.createModeration,
+        headers: {
+          Authorization: this.#genAuthorization(),
+          'Content-Type': 'application/json',
+        },
+        data: {
+          input,
+        },
+      },
+      {
+        debug: this.#debug,
+        log: this.#log,
+      },
+    )
+    const { data } = moderationRes
+    return data.results[0].flagged
+  }
 }
