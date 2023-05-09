@@ -270,7 +270,7 @@ encode_fn = function(text) {
 // src/utils/request.ts
 var import_axios = __toESM(require("axios"));
 async function post(config, opts) {
-  const { debug, log: log2 } = opts;
+  const { debug = false, log: log2 = console.log } = opts || {};
   const ins = import_axios.default.create({
     method: "POST",
     validateStatus(status) {
@@ -280,18 +280,24 @@ async function post(config, opts) {
   if (debug) {
     ins.interceptors.request.use((config2) => {
       log2("axios config", {
-        headers: config2.headers,
+        headers: {
+          ...config2.headers,
+          Authorization: void 0
+        },
         data: config2.data
       });
       return config2;
     });
   }
-  ins.interceptors.response.use((data) => {
-    return data;
-  }, (err) => {
-    log2("ins.interceptors.response reject", String(err));
-    return err;
-  });
+  ins.interceptors.response.use(
+    (data) => {
+      return data;
+    },
+    (err) => {
+      log2("ins.interceptors.response reject", String(err));
+      return err;
+    }
+  );
   const response = await ins({ timeout: 1e4, ...config });
   return response;
 }
@@ -302,7 +308,9 @@ var urls = {
   // get
   createCompletion: "https://api.openai.com/v1/completions",
   // post
-  createChatCompletion: "https://api.openai.com/v1/chat/completions"
+  createChatCompletion: "https://api.openai.com/v1/chat/completions",
+  // post
+  createModeration: "https://api.openai.com/v1/moderations"
   // post
 };
 var urls_default = urls;
@@ -541,6 +549,26 @@ var ChatGPT = class {
   }
   getStoreSize() {
     return __privateGet(this, _store2).getStoreSize();
+  }
+  async createModeration(input) {
+    const moderationRes = await post(
+      {
+        url: urls_default.createModeration,
+        headers: {
+          Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
+          "Content-Type": "application/json"
+        },
+        data: {
+          input
+        }
+      },
+      {
+        debug: __privateGet(this, _debug2),
+        log: __privateGet(this, _log2)
+      }
+    );
+    const { data } = moderationRes;
+    return data.results[0].flagged;
   }
 };
 _apiKey = new WeakMap();

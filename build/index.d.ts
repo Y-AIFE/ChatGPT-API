@@ -205,6 +205,7 @@ declare class ChatGPT {
     sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]): Promise<IChatCompletionStreamOnEndData>;
     clear1Conversation(parentMessageId?: string): Promise<void>;
     getStoreSize(): number;
+    createModeration(input: string): Promise<boolean>;
 }
 
 export { ChatGPT, ERole, IChatCompletion, IChatCompletionErrReponseData, IChatCompletionStreamOnEndData, IChatGPTHTTPDataMessage, IChatGPTParams, IChatGPTResponse, IChatGPTSystemMessage, IChatGPTUserMessage, IConversationStoreParams, ISendMessagesOpts, ITokensParams, TChatCompletionStreamOnEnd, TCommonMessage, TLog };
