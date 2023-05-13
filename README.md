@@ -6,7 +6,7 @@
 
 This is a more universal open-source library for the ChatGPT API that supports the CommonJS module system. Your Node.js version only needs to be above **v12**(The lower versions have not been tested yet) to use it. In general, it's a fairly universal ChatGPT API library that invokes the official ChatGPT HTTP interface directly.
 
-- Supports **CommonJS** 
+- Supports **CommonJS**
 - Supports **NodeJS V12+**
 - The network requests are made using axios and support **proxy**
 
@@ -95,7 +95,7 @@ async function run() {
 run()
 
 // [onProgress] 3
-// [onProgress] 
+// [onProgress]
 // [onEnd] {
 //   success: true,
 //   data: {
@@ -140,7 +140,10 @@ const api = new ChatGPT({
 
 void (async function () {
   console.log('---------------------your question------------------')
-  console.log({ text: '1 + 1=', systemPrompt: '你是一个计算器，接下来我会给你运算过程，你只需要给我结果' })
+  console.log({
+    text: '1 + 1=',
+    systemPrompt: '你是一个计算器，接下来我会给你运算过程，你只需要给我结果',
+  })
   let prevRes = await api.sendMessage({
     text: '1 + 1=',
     systemPrompt: '你是一个计算器，接下来我会给你运算过程，你只需要给我结果',
@@ -171,6 +174,101 @@ async function basicRunner(text: string, parentMessageId?: string) {
 
 **Note that there is a history of conversations stored within the SDK. When asking a question, the context from previous conversations will be used to continue the response.**
 
+## Azure OpenAI Service
+
+```typescript
+import { ChatGPT } from '../src'
+
+const api = new ChatGPT({
+  apiKey: process.env.AZURE_OPENAI_API_KEY as string, // get api key
+  AZURE: {
+    createChatCompletion:
+      'https://gptdemo1.openai.azure.com/openai/deployments/deploy1/chat/completions?api-version=2023-03-15-preview',
+  },
+})
+
+async function run() {
+  const res = await api.sendMessage({
+    text: '你好呀',
+  })
+  console.log('res', res)
+}
+
+run()
+// res {
+//   success: true,
+//   data: {
+//     id: 'bbf8e666-b804-46c4-b8e8-101bdb26d21d',
+//     text: '你好！有什么我能帮助你的吗？',
+//     created: 1683980830,
+//     role: 'assistant',
+//     parentMessageId: '82eb6719-2a69-4bfb-9a10-61b255e29ce3',
+//     tokens: 68,
+//     len: 133
+//   },
+//   status: 200
+// }
+```
+
+stream
+
+```typescript
+import { ChatGPT } from '../src'
+
+const api = new ChatGPT({
+  apiKey: process.env.AZURE_OPENAI_API_KEY as string, // get api key
+  AZURE: {
+    createChatCompletion:
+      'https://gptdemo1.openai.azure.com/openai/deployments/deploy1/chat/completions?api-version=2023-03-15-preview',
+  },
+})
+
+async function run() {
+  const res = await api.sendMessage({
+    text: '介绍下你自己',
+    onProgress(t) {
+      process.stdout.write(t)
+    },
+    onEnd(t) {
+      console.log('[onEnd]', t)
+    },
+  })
+  console.log('res', res)
+}
+
+run()
+
+// 我是ChatGPT，一个大型的自然语言处理模型，由OpenAI公司训练。我被设计成可以自动回答各种各样的问题，帮助人们解决问题，提供信息和娱乐。我有广泛的知识，可以回答许多主题问题，从科学和技术到历史和文化，甚至包括日常生活中的问题。
+// [onEnd] {
+//   success: true,
+//   data: {
+//     id: 'f6c068db-5d44-4a66-ba38-dbdb50e0c12d',
+//     text: '我是ChatGPT，一个大型的自然语言处理模型，由OpenAI公司训练。我被设计成可以自动回答各种各样的问题，帮助人们解决问题，提供信息和娱乐。我有广泛的知识，可以回答许多主题问题，从科学和技术到历史和文化，甚至包括日常生
+// 活中的问题。',
+//     created: 1683980782,
+//     role: 'assistant',
+//     parentMessageId: '2057cfbb-87c2-4a21-b9f8-7441fc54e520',
+//     tokens: 159,
+//     len: 239
+//   },
+//   status: 200
+// }
+// res {
+//   success: true,
+//   data: {
+//     id: 'f6c068db-5d44-4a66-ba38-dbdb50e0c12d',
+//     text: '我是ChatGPT，一个大型的自然语言处理模型，由OpenAI公司训练。我被设计成可以自动回答各种各样的问题，帮助人们解决问题，提供信息和娱乐。我有广泛的知识，可以回答许多主题问题，从科学和技术到历史和文化，甚至包括日常生
+// 活中的问题。',
+//     created: 1683980782,
+//     role: 'assistant',
+//     parentMessageId: '2057cfbb-87c2-4a21-b9f8-7441fc54e520',
+//     tokens: 159,
+//     len: 239
+//   },
+//   status: 200
+// }
+```
+
 ## api
 
 ```typescript
@@ -178,91 +276,99 @@ interface IChatGPTParams {
   /**
    * apiKey, you can get it in https://platform.openai.com/account/api-keys,You can apply for up to 5 at most.
    */
-  apiKey: string;
+  apiKey: string
   /**
    * model，default is 'gpt-3.5-turbo'
    */
-  model?: string;
+  model?: string
   /**
    * print logs
    */
-  debug?: boolean;
+  debug?: boolean
   /**
    * axios configs
    */
-  requestConfig?: AxiosRequestConfig;
+  requestConfig?: AxiosRequestConfig
   /**
    * configs for store
    */
   storeConfig?: {
-      /**
-       * lru max keys, default `300000`
-       */
-      maxKeys?: number;
-      /**
-       * Recursively search for historical messages, default `30` messages will be sent to the ChatGPT server
-       */
-      maxFindDepth?: number;
-  };
-  tokenizerConfig?: ITokensParams;
+    /**
+     * lru max keys, default `300000`
+     */
+    maxKeys?: number
+    /**
+     * Recursively search for historical messages, default `30` messages will be sent to the ChatGPT server
+     */
+    maxFindDepth?: number
+  }
+  tokenizerConfig?: ITokensParams
   /**
    * the maximum number of tokens when initiating a request, including prompts and completion. The default value is 4096.
    */
-  maxTokens?: number;
+  maxTokens?: number
   /**
    * The maximum number of tokens for a single message. It is used to prevent from sending too many tokens to the ChatGPT server.
    * If this number is exceeded, the message will be deleted and not passed on as a prompt to the chatGPT server. The default value is `1000`.
    * - notice: **Maybe the message returned by ChatGPT should not be sent to the ChatGPT server as a prompt for the next conversation**.
    */
-  limitTokensInAMessage?: number;
+  limitTokensInAMessage?: number
   /**
    * same reason as `limitTokensInAMessage`, **Maybe the message returned by ChatGPT should not be sent to the ChatGPT server as a prompt for the next conversation**, default value is `false`
    * - `true`: will ignore ChatGPT server message in the next sendMessage, and will only refer to `limitTokensInAMessage` in history messages
    * - `false`: will only refer to `limitTokensInAMessage` in history messages
    */
-  ignoreServerMessagesInPrompt?: boolean;
-  log?: TLog;
+  ignoreServerMessagesInPrompt?: boolean
+  log?: TLog
+  AZURE?: {
+    /**
+     * createChatCompletion url
+     */
+    createChatCompletion: string
+  }
 }
 ```
 
 ```typescript
 interface ISendMessagesOpts {
-  text?: string;
-  systemPrompt?: string;
-  parentMessageId?: string;
-  onProgress?: (t: string) => void;
-  onEnd?: (d: IChatCompletionStreamOnEndData) => void;
-  initialMessages?: TCommonMessage[];
-  model?: string;
+  text?: string
+  systemPrompt?: string
+  parentMessageId?: string
+  onProgress?: (t: string) => void
+  onEnd?: (d: IChatCompletionStreamOnEndData) => void
+  initialMessages?: TCommonMessage[]
+  model?: string
 }
 
 declare class ChatGPT {
-  #private;
-  constructor(opts: IChatGPTParams);
+  #private
+  constructor(opts: IChatGPTParams)
   /**
    * get related messages
    * @param parentMessageId
    */
   getMessages(opts: {
-      id: string;
-      maxDepth?: number;
-  }): Promise<TCommonMessage[]>;
+    id: string
+    maxDepth?: number
+  }): Promise<TCommonMessage[]>
   /**
    * add messages to store
    * @param messages
    * @returns
    */
-  addMessages(messages: TCommonMessage[]): Promise<void>;
+  addMessages(messages: TCommonMessage[]): Promise<void>
   /**
    * send message to ChatGPT server
    * @param opts.text new message
    * @param opts.systemPrompt prompt message
    * @param opts.parentMessageId
    */
-  sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]): Promise<IChatCompletionStreamOnEndData | null>;
-  clear1Conversation(parentMessageId?: string): Promise<void>;
-  getStoreSize(): number;
-  createModeration(input: string): Promise<boolean>;
+  sendMessage(
+    opts: ISendMessagesOpts | string | TCommonMessage[],
+  ): Promise<IChatCompletionStreamOnEndData | null>
+  clear1Conversation(parentMessageId?: string): Promise<void>
+  getStoreSize(): number
+  createModeration(input: string): Promise<boolean>
 }
 interface IChatCompletionStreamOnEndData {
   success: boolean
@@ -297,7 +403,7 @@ interface IChatCompletionErrReponseData {
 
 **If the SDK is applied in a multi-process service, the conversation store will be created in each process. When a request is initiated, it may result in the inability to locate the historical conversation. In such a situation, you can split the SDK into two projects for use.**
 
-In the `api.sendMessage` method, if you pass `TCommonMessage[]` array, the SDK does not store historical conversations internally. 
+In the `api.sendMessage` method, if you pass `TCommonMessage[]` array, the SDK does not store historical conversations internally.
 
 ```typescript
 sendMessage(opts: ISendMessagesOpts | string | TCommonMessage[]): Promise<IChatCompletionStreamOnEndData>;
@@ -332,16 +438,16 @@ messages = {
   text: '不吃早饭对身体有没有坏处',
   role: 'user',
   parentMessageId: undefined,
-  tokens: 16
+  tokens: 16,
 }
 response = {
   id: '4b51b42a-5b74-45c0-9e0d-ad14e68beb32',
   text: '不吃早餐可能会对身体造成负面影响。早餐是一天中最重要的餐点之一，它可以为身体提供所需的能量和营养素，有助于维持健康体重和改善认知能力。不吃早餐可能会导致饥饿感、低血糖、营养不良、代谢问题等问题。',
   created: 1681635939,
   role: 'assistant',
-  parentMessageId: '384771f7-5b67-476b-ac43-522237ff0e99',  // refer to the question id
+  parentMessageId: '384771f7-5b67-476b-ac43-522237ff0e99', // refer to the question id
   tokens: 189,
-  len: 225
+  len: 225,
 }
 ```
 

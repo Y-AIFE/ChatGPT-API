@@ -313,7 +313,7 @@ function genDefaultSystemMessage() {
 Current date: ${currentDate}`
   };
 }
-var _apiKey, _model, _urls, _debug2, _requestConfig, _store2, _tokenizer2, _maxTokens, _limitTokensInAMessage, _ignoreServerMessagesInPrompt, _log2, _streamChat, streamChat_fn, _chat, chat_fn, _validateAxiosResponse, validateAxiosResponse_fn, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
+var _apiKey, _model, _urls, _debug2, _requestConfig, _store2, _tokenizer2, _maxTokens, _limitTokensInAMessage, _ignoreServerMessagesInPrompt, _log2, _vendor, _streamChat, streamChat_fn, _chat, chat_fn, _validateAxiosResponse, validateAxiosResponse_fn, _makeConversations, makeConversations_fn, _genAuthorization, genAuthorization_fn;
 var ChatGPT = class {
   constructor(opts) {
     __privateAdd(this, _streamChat);
@@ -339,6 +339,7 @@ var ChatGPT = class {
     __privateAdd(this, _limitTokensInAMessage, void 0);
     __privateAdd(this, _ignoreServerMessagesInPrompt, void 0);
     __privateAdd(this, _log2, void 0);
+    __privateAdd(this, _vendor, "OPENAI");
     const {
       apiKey,
       model = "gpt-3.5-turbo",
@@ -349,7 +350,8 @@ var ChatGPT = class {
       maxTokens = 4096,
       limitTokensInAMessage = 1e3,
       ignoreServerMessagesInPrompt = false,
-      log: log2 = log
+      log: log2 = log,
+      AZURE
     } = opts;
     __privateSet(this, _apiKey, apiKey);
     __privateSet(this, _model, model);
@@ -360,6 +362,13 @@ var ChatGPT = class {
     __privateSet(this, _limitTokensInAMessage, limitTokensInAMessage);
     __privateSet(this, _ignoreServerMessagesInPrompt, ignoreServerMessagesInPrompt);
     __privateSet(this, _log2, log2);
+    if (AZURE) {
+      __privateSet(this, _vendor, "AZURE");
+      __privateSet(this, _urls, {
+        ...__privateGet(this, _urls),
+        ...AZURE
+      });
+    }
     __privateSet(this, _store2, new ConversationStore({
       ...storeConfig,
       debug: __privateGet(this, _debug2),
@@ -546,6 +555,7 @@ _maxTokens = new WeakMap();
 _limitTokensInAMessage = new WeakMap();
 _ignoreServerMessagesInPrompt = new WeakMap();
 _log2 = new WeakMap();
+_vendor = new WeakMap();
 _streamChat = new WeakSet();
 streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEnd, model) {
   const axiosResponse = await post(
@@ -553,15 +563,15 @@ streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEn
       url: __privateGet(this, _urls).createChatCompletion,
       ...__privateGet(this, _requestConfig),
       headers: {
-        Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
+        ...__privateGet(this, _vendor) === "OPENAI" ? { Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this) } : { "api-key": __privateGet(this, _apiKey) },
         "Content-Type": "application/json",
-        ...{ ...__privateGet(this, _requestConfig).headers || {} }
+        ...__privateGet(this, _requestConfig).headers || {}
       },
       data: {
         stream: true,
-        model,
+        ...__privateGet(this, _vendor) === "OPENAI" ? { model } : {},
         messages,
-        ...{ ...__privateGet(this, _requestConfig).data || {} }
+        ...__privateGet(this, _requestConfig).data || {}
       },
       responseType: "stream"
     },
@@ -577,11 +587,14 @@ streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEn
       const dataArr = buf.toString().split("\n");
       let onDataPieceText = "";
       for (const dataStr of dataArr) {
-        if (dataStr.indexOf("data: ") !== 0 || dataStr === "data: [DONE]")
-          continue;
-        const parsedData = JSON.parse(dataStr.slice(6));
-        const pieceText = parsedData.choices[0].delta.content || "";
-        onDataPieceText += pieceText;
+        try {
+          if (dataStr.indexOf("data: ") !== 0 || dataStr === "data: [DONE]")
+            continue;
+          const parsedData = JSON.parse(dataStr.slice(6));
+          const pieceText = parsedData.choices[0].delta.content || "";
+          onDataPieceText += pieceText;
+        } catch (e) {
+        }
       }
       if (typeof onProgress === "function") {
         onProgress(onDataPieceText);
@@ -639,14 +652,14 @@ chat_fn = async function(messages, model) {
       url: __privateGet(this, _urls).createChatCompletion,
       ...__privateGet(this, _requestConfig),
       headers: {
-        Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this),
+        ...__privateGet(this, _vendor) === "OPENAI" ? { Authorization: __privateMethod(this, _genAuthorization, genAuthorization_fn).call(this) } : { "api-key": __privateGet(this, _apiKey) },
         "Content-Type": "application/json",
-        ...{ ...__privateGet(this, _requestConfig).headers || {} }
+        ...__privateGet(this, _requestConfig).headers || {}
       },
       data: {
-        model,
+        ...__privateGet(this, _vendor) === "OPENAI" ? { model } : {},
         messages,
-        ...{ ...__privateGet(this, _requestConfig).data || {} }
+        ...__privateGet(this, _requestConfig).data || {}
       }
     },
     {

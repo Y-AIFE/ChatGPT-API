@@ -1,5 +1,6 @@
 /**
  * docs https://platform.openai.com/docs/api-reference/chat
+ * azure docs https://learn.microsoft.com/zh-cn/azure/cognitive-services/openai/reference
  */
 const urls = {
   listModels: 'https://api.openai.com/v1/models', // get

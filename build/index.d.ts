@@ -146,6 +146,12 @@ interface IChatGPTParams {
      */
     ignoreServerMessagesInPrompt?: boolean;
     log?: TLog;
+    AZURE?: {
+        /**
+         * createChatCompletion url
+         */
+        createChatCompletion: string;
+    };
 }
 /**
  * Tokenizer params

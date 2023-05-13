@@ -56,6 +56,7 @@ export class ChatGPT {
   #limitTokensInAMessage: number
   #ignoreServerMessagesInPrompt: boolean
   #log: TLog
+  #vendor: 'AZURE' | 'OPENAI' = 'OPENAI'
   constructor(opts: IChatGPTParams) {
     const {
       apiKey,
@@ -68,6 +69,7 @@ export class ChatGPT {
       limitTokensInAMessage = 1000,
       ignoreServerMessagesInPrompt = false,
       log = defaultLog,
+      AZURE,
     } = opts
 
     this.#apiKey = apiKey
@@ -79,6 +81,13 @@ export class ChatGPT {
     this.#limitTokensInAMessage = limitTokensInAMessage
     this.#ignoreServerMessagesInPrompt = ignoreServerMessagesInPrompt
     this.#log = log
+    if (AZURE) {
+      this.#vendor = 'AZURE'
+      this.#urls = {
+        ...this.#urls,
+        ...AZURE,
+      }
+    }
 
     this.#store = new ConversationStore({
       ...storeConfig,
@@ -268,15 +277,17 @@ export class ChatGPT {
         url: this.#urls.createChatCompletion,
         ...this.#requestConfig,
         headers: {
-          Authorization: this.#genAuthorization(),
+          ...(this.#vendor === 'OPENAI'
+            ? { Authorization: this.#genAuthorization() }
+            : { 'api-key': this.#apiKey }),
           'Content-Type': 'application/json',
-          ...{ ...(this.#requestConfig.headers || {}) },
+          ...(this.#requestConfig.headers || {}),
         },
         data: {
           stream: true,
-          model,
+          ...(this.#vendor === 'OPENAI' ? { model } : {}),
           messages,
-          ...{ ...(this.#requestConfig.data || {}) },
+          ...(this.#requestConfig.data || {}),
         },
         responseType: 'stream',
       },
@@ -292,12 +303,16 @@ export class ChatGPT {
         const dataArr = buf.toString().split('\n')
         let onDataPieceText = ''
         for (const dataStr of dataArr) {
-          // split 之后的空行，或者结束通知
-          if (dataStr.indexOf('data: ') !== 0 || dataStr === 'data: [DONE]')
-            continue
-          const parsedData = JSON.parse(dataStr.slice(6)) // [data: ]
-          const pieceText = parsedData.choices[0].delta.content || ''
-          onDataPieceText += pieceText
+          try {
+            // split 之后的空行，或者结束通知
+            if (dataStr.indexOf('data: ') !== 0 || dataStr === 'data: [DONE]')
+              continue
+            const parsedData = JSON.parse(dataStr.slice(6)) // [data: ]
+            const pieceText = parsedData.choices[0].delta.content || ''
+            onDataPieceText += pieceText
+          } catch(e) {
+            // this.#log('chunk parse error')
+          }
         }
         if (typeof onProgress === 'function') {
           onProgress(onDataPieceText)
@@ -362,14 +377,16 @@ export class ChatGPT {
         url: this.#urls.createChatCompletion,
         ...this.#requestConfig,
         headers: {
-          Authorization: this.#genAuthorization(),
+          ...(this.#vendor === 'OPENAI'
+            ? { Authorization: this.#genAuthorization() }
+            : { 'api-key': this.#apiKey }),
           'Content-Type': 'application/json',
-          ...{ ...(this.#requestConfig.headers || {}) },
+          ...(this.#requestConfig.headers || {}),
         },
         data: {
-          model,
+          ...(this.#vendor === 'OPENAI' ? { model } : {}),
           messages,
-          ...{ ...(this.#requestConfig.data || {}) },
+          ...(this.#requestConfig.data || {}),
         },
       },
       {
