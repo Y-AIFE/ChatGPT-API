@@ -26,11 +26,13 @@ interface IChatCompletion {
 interface IChatCompletionErrReponseData {
     message?: string;
     type?: string;
+    param?: any;
+    code?: string;
 }
 interface IChatCompletionStreamOnEndData {
     success: boolean;
     data: IChatGPTResponse | IChatCompletionErrReponseData;
-    raw?: IChatCompletion;
+    raw?: IChatCompletion | IChatCompletionErrReponseData;
     status: number;
 }
 type TChatCompletionStreamOnEnd = (endData: IChatCompletionStreamOnEndData) => void;

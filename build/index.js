@@ -517,7 +517,8 @@ var ChatGPT = class {
           if (!chatResponse.success) {
             return resolve({
               ...chatResponse,
-              data: chatResponse.data
+              data: chatResponse.data,
+              raw: chatResponse.data
             });
           }
           const res = chatResponse.data;
@@ -730,7 +731,8 @@ chat_fn = async function(messages, model) {
       success: false,
       data: {
         message: (_a = data == null ? void 0 : data.error) == null ? void 0 : _a.message,
-        type: (_b = data == null ? void 0 : data.error) == null ? void 0 : _b.type
+        type: (_b = data == null ? void 0 : data.error) == null ? void 0 : _b.type,
+        ...data == null ? void 0 : data.error
       },
       status
     };
