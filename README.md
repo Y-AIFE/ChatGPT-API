@@ -50,17 +50,24 @@ async function run() {
   console.log(res)
 }
 run()
-
 // res {
 //   success: true,
 //   data: {
-//     id: '753d6d2a-4352-423c-9ced-cec17e1acd64',
-//     text: '不吃早餐可能会导致身体出现一些不良反应，例如头昏、乏力、注意力不集中等。此外，长期不吃早餐还可能增加患肥胖症和糖尿病的风险。因此，建议每天都要吃早餐，以保持身体健康。',
-//     created: 1681634136,
+//     id: '0291c0ab-37a3-40c9-9c6b-353516909bd4',
+//     text: '你好！有什么我可以帮助你的吗？',
+//     created: 1689435751,
 //     role: 'assistant',
-//     parentMessageId: '96d050ce-b53c-4357-a5bd-188008adf194',
-//     tokens: 172,
-//     len: 211
+//     parentMessageId: '2bdd469f-7119-4f14-b195-5393f595a075',
+//     tokens: 66,
+//     len: 134
+//   },
+//   raw: {
+//     id: 'chatcmpl-7cbhf67RofiO7AmYyPD41iisahF26',
+//     object: 'chat.completion',
+//     created: 1689435751,
+//     model: 'gpt-3.5-turbo-0613',
+//     choices: [ [Object] ],
+//     usage: { prompt_tokens: 48, completion_tokens: 18, total_tokens: 66 }
 //   },
 //   status: 200
 // }
