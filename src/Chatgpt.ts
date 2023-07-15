@@ -223,6 +223,7 @@ export class ChatGPT {
             return resolve({
               ...chatResponse,
               data: chatResponse.data as IChatCompletionErrReponseData,
+              raw: chatResponse.data,
             })
           }
           const res = chatResponse.data as IChatCompletion
@@ -311,7 +312,7 @@ export class ChatGPT {
             const parsedData = JSON.parse(dataStr.slice(6)) // [data: ]
             const pieceText = parsedData.choices[0].delta.content || ''
             onDataPieceText += pieceText
-          } catch(e) {
+          } catch (e) {
             // this.#log('chunk parse error')
           }
         }
@@ -422,6 +423,7 @@ export class ChatGPT {
         data: {
           message: data?.error?.message,
           type: data?.error?.type,
+          ...data?.error,
         },
         status,
       }

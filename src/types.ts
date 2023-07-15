@@ -46,12 +46,14 @@ export interface IChatCompletion {
 export interface IChatCompletionErrReponseData {
   message?: string
   type?: string
+  param?: any
+  code?: string
 }
 
 export interface IChatCompletionStreamOnEndData {
   success: boolean
   data: IChatGPTResponse | IChatCompletionErrReponseData
-  raw?: IChatCompletion
+  raw?: IChatCompletion | IChatCompletionErrReponseData
   status: number
 }
 
