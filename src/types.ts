@@ -51,6 +51,7 @@ export interface IChatCompletionErrReponseData {
 export interface IChatCompletionStreamOnEndData {
   success: boolean
   data: IChatGPTResponse | IChatCompletionErrReponseData
+  raw?: IChatCompletion
   status: number
 }
 

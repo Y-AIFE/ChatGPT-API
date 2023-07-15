@@ -258,6 +258,7 @@ export class ChatGPT {
           resolve({
             success: true,
             data: responseMessage,
+            raw: res,
             status: chatResponse.status,
           })
         }

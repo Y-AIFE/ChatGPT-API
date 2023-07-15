@@ -1,22 +1,16 @@
-import apiKey from './.key'
 import { ChatGPT } from '../src'
 
 const api = new ChatGPT({
-  apiKey: apiKey, // get api key
+  apiKey: process.env.OPENAI_API_KEY as string, // get api key
   debug: true,
   requestConfig: {
     timeout: 600000,
-    proxy: {
-      protocol: 'http',
-      host: '127.0.0.1',
-      port: 7890,
-    },
   },
 })
 
 async function run() {
   const res = await api.sendMessage({
-    text: '用vue3写一个todolist，要求有状态保存',
+    text: '你好呀',
   })
   console.log('res', res)
 }
