@@ -547,6 +547,7 @@ var ChatGPT = class {
           resolve({
             success: true,
             data: responseMessage,
+            raw: res,
             status: chatResponse.status
           });
         }
