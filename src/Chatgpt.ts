@@ -267,7 +267,7 @@ export class ChatGPT {
 
   async #streamChat(
     messages: { content: string; role: ERole }[],
-    onProgress: boolean | ((t: string) => void),
+    onProgress: boolean | ((t: string, rwa: string) => void),
     responseMessagge: IChatGPTResponse,
     innerOnEnd: (d: IChatCompletionStreamOnEndData) => void,
     model: string,
@@ -315,7 +315,7 @@ export class ChatGPT {
           }
         }
         if (typeof onProgress === 'function') {
-          onProgress(onDataPieceText)
+          onProgress(onDataPieceText, buf.toString())
         }
         responseMessagge.text += onDataPieceText
       })

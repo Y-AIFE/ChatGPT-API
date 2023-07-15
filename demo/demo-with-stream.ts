@@ -1,16 +1,15 @@
-import apiKey from './.key'
 import { ChatGPT } from '../src'
 
 const api = new ChatGPT({
-  apiKey: apiKey, // get api key
+  apiKey: process.env.OPENAI_API_KEY as string, // get api key
 })
 
 async function run() {
   const res = await api.sendMessage({
     text: 'calc 1 + 2',
     model: 'gpt-3.5-turbo',
-    onProgress(t) {
-      console.log('[onProgress]', t)
+    onProgress(t, raw) {
+      console.log('[onProgress]', t, raw)
     },
     onEnd(t) {
       console.log('[onEnd]', t)
@@ -22,7 +21,7 @@ async function run() {
 run()
 
 // [onProgress] 3
-// [onProgress] 
+// [onProgress]
 // [onEnd] {
 //   success: true,
 //   data: {
