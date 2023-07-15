@@ -334,7 +334,7 @@ interface ISendMessagesOpts {
   text?: string
   systemPrompt?: string
   parentMessageId?: string
-  onProgress?: (t: string) => void
+  onProgress?: (t: string, raw: string) => void
   onEnd?: (d: IChatCompletionStreamOnEndData) => void
   initialMessages?: TCommonMessage[]
   model?: string

@@ -597,7 +597,7 @@ streamChat_fn = async function(messages, onProgress, responseMessagge, innerOnEn
         }
       }
       if (typeof onProgress === "function") {
-        onProgress(onDataPieceText);
+        onProgress(onDataPieceText, buf.toString());
       }
       responseMessagge.text += onDataPieceText;
     });
