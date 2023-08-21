@@ -43,6 +43,7 @@
     "chalk": "^5.2.0",
     "keyv": "^4.5.2",
     "lru-cache": "^7.18.1",
+    "node-fetch": "^3.3.2",
     "uuid": "^9.0.0"
   },
   "engines": {
